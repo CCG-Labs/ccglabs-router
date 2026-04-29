@@ -141,7 +141,7 @@ The migration is mechanically a series of casing-aware substitutions. Each repla
 | `iambrianreich/bhr-router` | `CCG-Labs/ccglabs-router` |
 | `BHR\$CLASS` (template artifact in TokenizedRoute.php) | `CCGLabs\Router\Routes\TokenizedRoute` |
 
-Some replacements need ordering care: `BHR\\Router` must run before `BHR\Router` only if your tool double-escapes; for raw file contents read by sed/php scripts, the escaped form lives only inside JSON strings, so no ordering issue exists in practice.
+Some replacements need ordering care: `BHR\\Router` must run before `BHR\Router` only if your tool double-escapes; for raw file contents read by sed/php scripts, the escaped form lives only inside JSON strings, so no ordering issue exists in practice. The `Test\BHR` (typo, singular `Test`) rule must run before the `Tests\BHR` rule so the typo isn't accidentally consumed as a partial match — or apply it as a targeted single-file fix.
 
 ## Verification
 
