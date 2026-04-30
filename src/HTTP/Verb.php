@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\HTTP\Verb.
+ * This file contains CCGLabs\Router\HTTP\Verb.
  *
  * @author Brian Reich <brian@brianreich.dev>
  * @copyright Copyright (C) 2025 Brian Reich
@@ -10,7 +10,7 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router\HTTP;
+namespace CCGLabs\Router\HTTP;
 
 /**
  * Legal HTTP request verbs.

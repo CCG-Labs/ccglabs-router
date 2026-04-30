@@ -1,6 +1,7 @@
 <?php
+
 /**
- * This file contains Tests\BHR\Router\RequestHandlers\CallableRequestHandlerTest
+ * This file contains Tests\CCGLabs\Router\IRouteTest
  *
  * Copyright 2025 Brian Reich
  *
@@ -8,7 +9,7 @@
  * software and associated documentation files (the “Software”), to deal in the
  * Software without restriction, including without limitation the rights to use, copy,
  * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so, subject to the 
+ * and to permit persons to whom the Software is furnished to do so, subject to the
  * following conditions:
  *
  * The above copyright notice and this permission notice shall be included in all
@@ -28,24 +29,31 @@
 
 declare(strict_types=1);
 
-namespace Tests\BHR\Router\RequestHandlers;
+namespace Tests\CCGLabs\Router;
 
-use BHR\Router\RequestHandlers\CallableRequestHandler;
+use CCGLabs\Router\IRoute;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use ReflectionClass;
 
-class CallableRequestHandlerTest extends TestCase {
-    public function testClassExists(): void {
-        $this->assertTrue(class_exists(CallableRequestHandler::class));
+class IRouteTest extends TestCase
+{
+    public function testInterfaceExists(): void
+    {
+        $this->assertTrue(interface_exists(IRoute::class));
     }
 
-    public function testConstructor(): void {
-        $fakedRequest = $this->createMock(ServerRequestInterface::class);
-        $fakedResponse = $this->createMock(ResponseInterface::class);
-        $callable = fn(ServerRequestInterface $request) => $fakedResponse;
-        $callableRequestHandler = new CallableRequestHandler($callable);
-        $response = $callableRequestHandler->handle($fakedRequest);
-        $this->assertSame($fakedResponse, $response);
+    public function testInterfaceHasMatchesMethod(): void
+    {
+        $reflectionClass = new ReflectionClass(IRoute::class);
+        $this->assertTrue($reflectionClass->hasMethod('matches'));
+
+        $reflectionMethod = $reflectionClass->getMethod('matches');
+        $returnType = $reflectionMethod->getReturnType();
+        $this->assertEquals('bool', (string) $returnType);
+
+        $this->assertEquals(1, $reflectionMethod->getNumberOfParameters());
+        $reflectionParameters = $reflectionMethod->getParameters();
+        $this->assertEquals('path', $reflectionParameters[0]->getName());
+        $this->assertEquals('string', $reflectionParameters[0]->getType());
     }
 }

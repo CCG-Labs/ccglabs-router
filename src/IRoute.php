@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\IRoute
+ * This file contains CCGLabs\Router\IRoute
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,7 +29,7 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router;
+namespace CCGLabs\Router;
 
 /**
  * An IRoute is a URI path into an application.

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains Tests\BHR\Router\IRouteTest
+ * This file contains Tests\CCGLabs\Router\IParameterizedRouteTest
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,31 +29,25 @@
 
 declare(strict_types=1);
 
-namespace Tests\BHR\Router;
+namespace Tests\CCGLabs\Router;
 
-use BHR\Router\IRoute;
+use CCGLabs\Router\IParameterizedRoute;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
-class IRouteTest extends TestCase
+class IParameterizedRouteTest extends TestCase
 {
     public function testInterfaceExists(): void
     {
-        $this->assertTrue(interface_exists(IRoute::class));
+        $this->assertTrue(interface_exists(IParameterizedRoute::class));
     }
 
-    public function testInterfaceHasMatchesMethod(): void
+    public function testGetParametersMethod(): void
     {
-        $reflectionClass = new ReflectionClass(IRoute::class);
-        $this->assertTrue($reflectionClass->hasMethod('matches'));
-
-        $reflectionMethod = $reflectionClass->getMethod('matches');
+        $reflectionClass = new ReflectionClass(IParameterizedRoute::class);
+        $this->assertTrue($reflectionClass->hasMethod('getParameters'));
+        $reflectionMethod = $reflectionClass->getMethod('getParameters');
         $returnType = $reflectionMethod->getReturnType();
-        $this->assertEquals('bool', (string) $returnType);
-
-        $this->assertEquals(1, $reflectionMethod->getNumberOfParameters());
-        $reflectionParameters = $reflectionMethod->getParameters();
-        $this->assertEquals('path', $reflectionParameters[0]->getName());
-        $this->assertEquals('string', $reflectionParameters[0]->getType());
+        $this->assertEquals('array', (string) $returnType);
     }
 }

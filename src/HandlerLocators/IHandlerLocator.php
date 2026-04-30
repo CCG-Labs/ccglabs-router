@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\HandlerLocators\IHandlerLocator
+ * This file contains CCGLabs\Router\HandlerLocators\IHandlerLocator
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,10 +29,10 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router\HandlerLocators;
+namespace CCGLabs\Router\HandlerLocators;
 
-use BHR\Router\HTTP\Verb;
-use BHR\Router\IRoute;
+use CCGLabs\Router\HTTP\Verb;
+use CCGLabs\Router\IRoute;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 

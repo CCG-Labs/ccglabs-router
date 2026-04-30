@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains Tests\BHR\Router\HandlerLocators\DefaultHandlerLocatorTest
+ * This file contains Tests\CCGLabs\Router\HandlerLocators\DefaultHandlerLocatorTest
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,12 +29,12 @@
 
 declare(strict_types=1);
 
-namespace Test\BHR\Router\HandlerLocators;
+namespace Tests\CCGLabs\Router\HandlerLocators;
 
-use BHR\Router\Exceptions\RouteHandlerNotFoundException;
-use BHR\Router\HandlerLocators\DefaultHandlerLocator;
-use BHR\Router\HTTP\Verb;
-use BHR\Router\IRoute;
+use CCGLabs\Router\Exceptions\RouteHandlerNotFoundException;
+use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
+use CCGLabs\Router\HTTP\Verb;
+use CCGLabs\Router\IRoute;
 use Exception;
 use InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;
@@ -46,16 +46,19 @@ use Psr\Http\Message\UriInterface;
 
 class DefaultHandlerLocatorTest extends TestCase
 {
-    public function testClassExists(): void {
+    public function testClassExists(): void
+    {
         $this->assertTrue(class_exists(DefaultHandlerLocator::class));
     }
 
-    public function testConstructor(): void {
+    public function testConstructor(): void
+    {
         $locator = new DefaultHandlerLocator();
         $this->assertInstanceOf(DefaultHandlerLocator::class, $locator);
     }
 
-    public function testAddRouteSupportsCallable(): void {
+    public function testAddRouteSupportsCallable(): void
+    {
         $locator = new DefaultHandlerLocator();
 
         $verb = Verb::GET;
@@ -63,7 +66,8 @@ class DefaultHandlerLocatorTest extends TestCase
         $handler = function (RequestInterface $request): RequestHandlerInterface {
             // Dummy handler
             return new class implements RequestHandlerInterface {
-                public function handle(RequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                public function handle(RequestInterface $request): \Psr\Http\Message\ResponseInterface
+                {
                     // Dummy response
                     throw new Exception("Not implemented");
                 }
@@ -74,7 +78,8 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->assertInstanceOf(DefaultHandlerLocator::class, $result);
     }
 
-    public function testAddRouteSupportsRequestHandlerInterface(): void {
+    public function testAddRouteSupportsRequestHandlerInterface(): void
+    {
         $locator = new DefaultHandlerLocator();
 
         $verb = Verb::POST;
@@ -85,7 +90,8 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->assertInstanceOf(DefaultHandlerLocator::class, $result);
     }
 
-    public function testLocateThrowsInvalidArgumentExceptionForUnsupportedVerb(): void {
+    public function testLocateThrowsInvalidArgumentExceptionForUnsupportedVerb(): void
+    {
         $this->expectException(InvalidArgumentException::class);
 
         $locator = new DefaultHandlerLocator();
@@ -95,10 +101,11 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator->locate($request);
     }
 
-    public function testLocateThrowsRouteHandlerNotFoundExceptionForUnregisteredRoute(): void {
+    public function testLocateThrowsRouteHandlerNotFoundExceptionForUnregisteredRoute(): void
+    {
         $this->expectException(RouteHandlerNotFoundException::class);
         $this->expectExceptionMessage('Handler not found for /unregistered');
-        
+
         $uri = $this->createMock(UriInterface::class);
         $uri->method('getPath')->willReturn('/unregistered');
 
@@ -110,7 +117,8 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator->locate($request);
     }
 
-    public function testLocateThrowsRouteHandlerNotFoundExceptionWhenRoutesAreRegisteredButDoNotMatch(): void {
+    public function testLocateThrowsRouteHandlerNotFoundExceptionWhenRoutesAreRegisteredButDoNotMatch(): void
+    {
         $this->expectException(RouteHandlerNotFoundException::class);
         $this->expectExceptionMessage('Handler not found for /no-match');
 
@@ -123,7 +131,8 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
         $locator->addRoute(Verb::GET, $route, function (RequestInterface $request): RequestHandlerInterface {
             return new class implements RequestHandlerInterface {
-                public function handle(RequestInterface $request): \Psr\Http\Message\ResponseInterface {
+                public function handle(RequestInterface $request): \Psr\Http\Message\ResponseInterface
+                {
                     throw new Exception("Not implemented");
                 }
             };
@@ -136,7 +145,8 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator->locate($request);
     }
 
-    public function testLocateReturnsMatchingRoute(): void {
+    public function testLocateReturnsMatchingRoute(): void
+    {
         $uri = $this->createMock(UriInterface::class);
         $uri->method('getPath')->willReturn('/match');
 

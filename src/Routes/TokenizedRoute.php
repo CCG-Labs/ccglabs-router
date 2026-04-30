@@ -1,14 +1,14 @@
 <?php
 
 /**
- * This file contains BHR\$CLASS
+ * This file contains CCGLabs\Router\Routes\TokenizedRoute
 */
 
-namespace BHR\Router\Routes;
+namespace CCGLabs\Router\Routes;
 
 use BadMethodCallException;
-use BHR\Router\IParameterizedRoute;
-use BHR\Router\IRoute;
+use CCGLabs\Router\IParameterizedRoute;
+use CCGLabs\Router\IRoute;
 use InvalidArgumentException;
 
 /**

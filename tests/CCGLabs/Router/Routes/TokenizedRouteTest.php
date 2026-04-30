@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains Tests\BHR\Router\Routes\TokenizedRouteTest
+ * This file contains Tests\CCGLabs\Router\Routes\TokenizedRouteTest
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,9 +29,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\BHR\Router\Routes;
+namespace Tests\CCGLabs\Router\Routes;
 
-use BHR\Router\Routes\TokenizedRoute;
+use CCGLabs\Router\Routes\TokenizedRoute;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 

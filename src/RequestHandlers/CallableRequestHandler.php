@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\RequestHandlers\CallableRequestHandler.
+ * This file contains CCGLabs\Router\RequestHandlers\CallableRequestHandler.
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,7 +29,7 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router\RequestHandlers;
+namespace CCGLabs\Router\RequestHandlers;
 
 use Closure;
 use Psr\Http\Message\ResponseInterface;

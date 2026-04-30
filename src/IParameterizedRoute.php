@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\IParameterizedRoute
+ * This file contains CCGLabs\Router\IParameterizedRoute
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,7 +29,7 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router;
+namespace CCGLabs\Router;
 
 /**
  * An IParameterizedRoute is a route that may contain named parameters which

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\HandlerLocators\DefaultHandlerLocator
+ * This file contains CCGLabs\Router\HandlerLocators\DefaultHandlerLocator
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,12 +29,12 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router\HandlerLocators;
+namespace CCGLabs\Router\HandlerLocators;
 
-use BHR\Router\Exceptions\RouteHandlerNotFoundException;
-use BHR\Router\HTTP\Verb;
-use BHR\Router\IRoute;
-use BHR\Router\RequestHandlers\CallableRequestHandler;
+use CCGLabs\Router\Exceptions\RouteHandlerNotFoundException;
+use CCGLabs\Router\HTTP\Verb;
+use CCGLabs\Router\IRoute;
+use CCGLabs\Router\RequestHandlers\CallableRequestHandler;
 use Exception;
 use InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;

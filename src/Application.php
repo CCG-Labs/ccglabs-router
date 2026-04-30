@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\Application
+ * This file contains CCGLabs\Router\Application
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,12 +29,12 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router;
+namespace CCGLabs\Router;
 
-use BHR\Router\HandlerLocators\DefaultHandlerLocator;
-use BHR\Router\HandlerLocators\IHandlerLocator;
-use BHR\Router\HTTP\Verb;
-use BHR\Router\Routes\TokenizedRoute;
+use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
+use CCGLabs\Router\HandlerLocators\IHandlerLocator;
+use CCGLabs\Router\HTTP\Verb;
+use CCGLabs\Router\Routes\TokenizedRoute;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -47,7 +47,6 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class Application implements RequestHandlerInterface
 {
-
     /**
      * Collection of added middlewares.
      *

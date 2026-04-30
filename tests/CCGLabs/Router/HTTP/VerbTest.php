@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\BHR\HTTP;
+namespace Tests\CCGLabs\Router\HTTP;
 
-use BHR\Router\HTTP\Verb;
+use CCGLabs\Router\HTTP\Verb;
 use PHPUnit\Framework\TestCase;
 
 class VerbTest extends TestCase

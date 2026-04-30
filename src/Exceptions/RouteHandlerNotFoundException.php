@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\Exceptions\RouteHandlerNotFoundException
+ * This file contains CCGLabs\Router\Exceptions\RouteHandlerNotFoundException
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,7 +29,7 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router\Exceptions;
+namespace CCGLabs\Router\Exceptions;
 
 use Exception;
 use Psr\Http\Message\ServerRequestInterface;

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains Tests\BHR\Router\IParameterizedRouteTest
+ * This file contains Tests\CCGLabs\Router\RequestHandlers\CallableRequestHandlerTest
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,25 +29,27 @@
 
 declare(strict_types=1);
 
-namespace Tests\BHR\Router;
+namespace Tests\CCGLabs\Router\RequestHandlers;
 
-use BHR\Router\IParameterizedRoute;
+use CCGLabs\Router\RequestHandlers\CallableRequestHandler;
 use PHPUnit\Framework\TestCase;
-use ReflectionClass;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
-class IParameterizedRouteTest extends TestCase
+class CallableRequestHandlerTest extends TestCase
 {
-    public function testInterfaceExists(): void
+    public function testClassExists(): void
     {
-        $this->assertTrue(interface_exists(IParameterizedRoute::class));
+        $this->assertTrue(class_exists(CallableRequestHandler::class));
     }
 
-    public function testGetParametersMethod(): void
+    public function testConstructor(): void
     {
-        $reflectionClass = new ReflectionClass(IParameterizedRoute::class);
-        $this->assertTrue($reflectionClass->hasMethod('getParameters'));
-        $reflectionMethod = $reflectionClass->getMethod('getParameters');
-        $returnType = $reflectionMethod->getReturnType();
-        $this->assertEquals('array', (string) $returnType);
+        $fakedRequest = $this->createMock(ServerRequestInterface::class);
+        $fakedResponse = $this->createMock(ResponseInterface::class);
+        $callable = fn(ServerRequestInterface $request) => $fakedResponse;
+        $callableRequestHandler = new CallableRequestHandler($callable);
+        $response = $callableRequestHandler->handle($fakedRequest);
+        $this->assertSame($fakedResponse, $response);
     }
 }

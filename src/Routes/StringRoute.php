@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains BHR\Router\Routes\StringRoute
+ * This file contains CCGLabs\Router\Routes\StringRoute
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,9 +29,9 @@
 
 declare(strict_types=1);
 
-namespace BHR\Router\Routes;
+namespace CCGLabs\Router\Routes;
 
-use BHR\Router\IRoute;
+use CCGLabs\Router\IRoute;
 
 /**
  * A StringRoute is a single route which matches when the request path is

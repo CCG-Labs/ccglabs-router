@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Tests\BHR\Router\HandlerLocators;
+namespace Tests\CCGLabs\Router\HandlerLocators;
 
-use BHR\Router\HandlerLocators\IHandlerLocator;
+use CCGLabs\Router\HandlerLocators\IHandlerLocator;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;

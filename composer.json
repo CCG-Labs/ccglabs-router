@@ -6,12 +6,12 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "BHR\\Router\\": "src/"
+            "CCGLabs\\Router\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\BHR\\": "tests/BHR/"
+            "Tests\\CCGLabs\\Router\\": "tests/CCGLabs/Router/"
         }
     },
     "authors": [

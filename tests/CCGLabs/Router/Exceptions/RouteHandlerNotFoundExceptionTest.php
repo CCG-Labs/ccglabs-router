@@ -1,7 +1,7 @@
 <?php
 
 /**
- * This file contains Tests\BHR\Router\Routes\StringRouteTest
+ * This file contains Tests\CCGLabs\Router\Exceptions\RouteHandlerNotFoundExceptionTest
  *
  * Copyright 2025 Brian Reich
  *
@@ -29,30 +29,32 @@
 
 declare(strict_types=1);
 
-namespace Tests\BHR\Router\Routes;
+namespace Tests\CCGLabs\Router\Exceptions;
 
-use BHR\Router\Routes\StringRoute;
+use CCGLabs\Router\Exceptions\RouteHandlerNotFoundException;
+use CCGLabs\Router\IRoute;
+use Exception;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ServerRequestInterface;
 
-class StringRouteTest extends TestCase
+class RouteHandlerNotFoundExceptionTest extends TestCase
 {
     public function testClassExists(): void
     {
-        $this->assertTrue(class_exists(StringRoute::class));
+        $this->assertTrue(class_exists(RouteHandlerNotFoundException::class));
     }
 
-    public function testMatchesReturnsTrueWhenStringsAreEqual(): void
+    public function testConstructor(): void
     {
-        $path = '/users/12';
-        $route = new StringRoute($path);
-        $this->assertTrue($route->matches($path));
-    }
+        $message = 'hello';
+        $code = 12;
+        $previous = new Exception('route not found');
+        $request = $this->createMock(ServerRequestInterface::class);
 
-    public function testMatchesReturnsFalseWhenStringsAreNotEqual(): void
-    {
-        $routePath = '/users/me';
-        $route = new StringRoute($routePath);
-        $requestPath = '/users/somebodyelse';
-        $this->assertFalse($route->matches($requestPath));
+        $exception = new RouteHandlerNotFoundException($request, $message, $code, $previous);
+        $this->assertEquals($message, $exception->getMessage());
+        $this->assertEquals($code, $exception->getCode());
+        $this->assertEquals($previous, $exception->getPrevious());
+        $this->assertEquals($request, $exception->getRequest());
     }
 }
