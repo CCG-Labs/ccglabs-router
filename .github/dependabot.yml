@@ -8,8 +8,6 @@ updates:
       day: "monday"
       time: "03:00"
     open-pull-requests-limit: 10
-    reviewers:
-      - "iambrianreich"
     labels:
       - "dependencies"
       - "php"
@@ -25,8 +23,6 @@ updates:
       day: "monday"
       time: "03:00"
     open-pull-requests-limit: 10
-    reviewers:
-      - "iambrianreich"
     labels:
       - "dependencies"
       - "github-actions"

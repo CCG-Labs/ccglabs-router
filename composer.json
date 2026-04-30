@@ -1,8 +1,8 @@
 {
-    "name": "bhr/router",
+    "name": "ccglabs/router",
     "description": "A simple router for simple applications.",
     "type": "library",
-    "version": "1.0",
+    "version": "2.0.0",
     "license": "MIT",
     "autoload": {
         "psr-4": {
