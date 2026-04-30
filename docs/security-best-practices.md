@@ -1,8 +1,8 @@
-# Security Best Practices for BHR Router
+# Security Best Practices for CCGLabs Router
 
 ## Introduction
 
-The BHR Router is designed with a clear separation of concerns. The router's responsibility is limited to:
+The CCGLabs Router is designed with a clear separation of concerns. The router's responsibility is limited to:
 - Matching URL patterns to routes
 - Extracting parameters from URLs
 - Dispatching requests to the appropriate handler
@@ -284,7 +284,7 @@ $app->get('/api/v1/files/{userId}/{filename}', function($request) {
 
 ### Router Exception Philosophy
 
-The BHR Router intentionally provides **detailed, informative exceptions** when routes cannot be matched or other errors occur. This is a deliberate architectural decision that follows industry standards.
+The CCGLabs Router intentionally provides **detailed, informative exceptions** when routes cannot be matched or other errors occur. This is a deliberate architectural decision that follows industry standards.
 
 ### Why Detailed Exceptions Are Correct
 
@@ -479,7 +479,7 @@ public function testErrorHandlerSanitizesProductionErrors(): void {
 
 ## Summary
 
-The BHR Router follows the principle of separation of concerns. It extracts parameters but doesn't validate their contents, and it provides detailed exceptions but doesn't sanitize them because:
+The CCGLabs Router follows the principle of separation of concerns. It extracts parameters but doesn't validate their contents, and it provides detailed exceptions but doesn't sanitize them because:
 
 1. **It can't know** how parameters will be used or what information is sensitive
 2. **It shouldn't assume** what validation or sanitization is needed

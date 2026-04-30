@@ -1,7 +1,7 @@
-# bhr/router
+# ccglabs/router
 
-[![CI](https://github.com/iambrianreich/bhr-router/workflows/CI/badge.svg)](https://github.com/iambrianreich/bhr-router/actions/workflows/ci.yml)
-[![Security](https://github.com/iambrianreich/bhr-router/workflows/Security/badge.svg)](https://github.com/iambrianreich/bhr-router/actions/workflows/security.yml)
+[![CI](https://github.com/CCG-Labs/ccglabs-router/workflows/CI/badge.svg)](https://github.com/CCG-Labs/ccglabs-router/actions/workflows/ci.yml)
+[![Security](https://github.com/CCG-Labs/ccglabs-router/workflows/Security/badge.svg)](https://github.com/CCG-Labs/ccglabs-router/actions/workflows/security.yml)
 [![PHP 8.4+](https://img.shields.io/badge/PHP-8.4%2B-blue.svg)](https://www.php.net)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -9,7 +9,7 @@ A simple PHP router for simple PHP projects
 
 ## Features
 
-- `BHR\Router\Application` - Front controller where routes and route groups are registered.
+- `CCGLabs\Router\Application` - Front controller where routes and route groups are registered.
 
 
 ## Installation
@@ -17,7 +17,7 @@ A simple PHP router for simple PHP projects
 Install into your project:
 
 ```bash
-composer require bhr/router
+composer require ccglabs/router
 ```
 
 ### Verify Installation
@@ -29,12 +29,12 @@ After installation, verify the router is working by creating a test file:
 <?php
 require 'vendor/autoload.php';
 
-use BHR\Router\Application;
-use BHR\Router\HandlerLocators\DefaultHandlerLocator;
+use CCGLabs\Router\Application;
+use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
 
 // If this runs without errors, the router is installed correctly
 $app = new Application(new DefaultHandlerLocator());
-echo "✓ BHR Router installed successfully!\n";
+echo "✓ CCGLabs Router installed successfully!\n";
 ```
 
 Run the test:
@@ -50,8 +50,8 @@ php test-router.php
 <?php
 require 'vendor/autoload.php';
 
-use BHR\Router\Application;
-use BHR\Router\HandlerLocators\DefaultHandlerLocator;
+use CCGLabs\Router\Application;
+use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 
@@ -89,7 +89,7 @@ $app->delete('/users/{id}', function($request) {
 $request = ServerRequest::fromGlobals();
 try {
     $response = $app->handle($request);
-} catch (\BHR\Router\Exceptions\RouteHandlerNotFoundException $e) {
+} catch (\CCGLabs\Router\Exceptions\RouteHandlerNotFoundException $e) {
     $response = new Response(404, [], 'Not Found');
 }
 
