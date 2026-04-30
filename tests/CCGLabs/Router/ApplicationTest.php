@@ -54,14 +54,14 @@ class ApplicationTest extends TestCase
 
     public function testConstructorAcceptsAnyIHandlerLocator(): void
     {
-        $locator = $this->createMock(IHandlerLocator::class);
+        $locator = $this->createStub(IHandlerLocator::class);
         $application = new Application($locator);
         $this->assertSame($locator, $application->getHandlerLocator());
     }
 
     public function testAddRouteCallsHandlerLocatorAddRoute(): void
     {
-        $route = $this->createMock(IRoute::class);
+        $route = $this->createStub(IRoute::class);
         $handler = fn () => true;
         $routeHandler = $this->createMock(IHandlerLocator::class);
         $routeHandler
@@ -189,8 +189,8 @@ class ApplicationTest extends TestCase
      */
     public function testMiddlewareExceptionHandling(): void
     {
-        $request = $this->createMock(ServerRequestInterface::class);
-        $response = $this->createMock(ResponseInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
 
         // Create a handler that will be called
         $handler = $this->createMock(RequestHandlerInterface::class);
@@ -224,8 +224,8 @@ class ApplicationTest extends TestCase
      */
     public function testMultipleMiddlewareExecutionOrder(): void
     {
-        $request = $this->createMock(ServerRequestInterface::class);
-        $response = $this->createMock(ResponseInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $executionOrder = [];
 
         // Create final handler
@@ -303,8 +303,8 @@ class ApplicationTest extends TestCase
      */
     public function testMiddlewareCanShortCircuit(): void
     {
-        $request = $this->createMock(ServerRequestInterface::class);
-        $shortCircuitResponse = $this->createMock(ResponseInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
+        $shortCircuitResponse = $this->createStub(ResponseInterface::class);
 
         // Handler should never be called
         $handler = $this->createMock(RequestHandlerInterface::class);
@@ -334,9 +334,9 @@ class ApplicationTest extends TestCase
      */
     public function testMiddlewareCanModifyRequest(): void
     {
-        $originalRequest = $this->createMock(ServerRequestInterface::class);
-        $modifiedRequest = $this->createMock(ServerRequestInterface::class);
-        $response = $this->createMock(ResponseInterface::class);
+        $originalRequest = $this->createStub(ServerRequestInterface::class);
+        $modifiedRequest = $this->createStub(ServerRequestInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
 
         // Handler should receive modified request
         $handler = $this->createMock(RequestHandlerInterface::class);

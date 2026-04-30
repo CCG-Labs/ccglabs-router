@@ -49,7 +49,7 @@ class RouteHandlerNotFoundExceptionTest extends TestCase
         $message = 'hello';
         $code = 12;
         $previous = new Exception('route not found');
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
 
         $exception = new RouteHandlerNotFoundException($request, $message, $code, $previous);
         $this->assertEquals($message, $exception->getMessage());

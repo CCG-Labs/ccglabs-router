@@ -62,7 +62,7 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
 
         $verb = Verb::GET;
-        $route = $this->createMock(IRoute::class);
+        $route = $this->createStub(IRoute::class);
         $handler = function (RequestInterface $request): RequestHandlerInterface {
             // Dummy handler
             return new class implements RequestHandlerInterface {
@@ -83,8 +83,8 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
 
         $verb = Verb::POST;
-        $route = $this->createMock(IRoute::class);
-        $handler = $this->createMock(RequestHandlerInterface::class);
+        $route = $this->createStub(IRoute::class);
+        $handler = $this->createStub(RequestHandlerInterface::class);
 
         $result = $locator->addRoute($verb, $route, $handler);
         $this->assertInstanceOf(DefaultHandlerLocator::class, $result);
@@ -95,7 +95,7 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $locator = new DefaultHandlerLocator();
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getMethod')->willReturn('INVALID_VERB');
 
         $locator->locate($request);
@@ -106,11 +106,11 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->expectException(RouteHandlerNotFoundException::class);
         $this->expectExceptionMessage('Handler not found for /unregistered');
 
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/unregistered');
 
         $locator = new DefaultHandlerLocator();
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
@@ -122,10 +122,10 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->expectException(RouteHandlerNotFoundException::class);
         $this->expectExceptionMessage('Handler not found for /no-match');
 
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/no-match');
 
-        $route = $this->createMock(IRoute::class);
+        $route = $this->createStub(IRoute::class);
         $route->method('matches')->willReturn(false);
 
         $locator = new DefaultHandlerLocator();
@@ -138,7 +138,7 @@ class DefaultHandlerLocatorTest extends TestCase
             };
         });
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
@@ -147,18 +147,18 @@ class DefaultHandlerLocatorTest extends TestCase
 
     public function testLocateReturnsMatchingRoute(): void
     {
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/match');
 
-        $route = $this->createMock(IRoute::class);
+        $route = $this->createStub(IRoute::class);
         $route->method('matches')->willReturn(true);
 
-        $handler = $this->createMock(RequestHandlerInterface::class);
+        $handler = $this->createStub(RequestHandlerInterface::class);
 
         $locator = new DefaultHandlerLocator();
         $locator->addRoute(Verb::GET, $route, $handler);
 
-        $request = $this->createMock(RequestInterface::class);
+        $request = $this->createStub(RequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
@@ -171,26 +171,26 @@ class DefaultHandlerLocatorTest extends TestCase
      */
     public function testRoutePrecedenceFirstMatchWins(): void
     {
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/users/123');
 
         // Create two routes that both match
-        $route1 = $this->createMock(IRoute::class);
+        $route1 = $this->createStub(IRoute::class);
         $route1->method('matches')->with('/users/123')->willReturn(true);
 
-        $route2 = $this->createMock(IRoute::class);
+        $route2 = $this->createStub(IRoute::class);
         $route2->method('matches')->with('/users/123')->willReturn(true);
 
         // Create different handlers
-        $handler1 = $this->createMock(RequestHandlerInterface::class);
-        $handler2 = $this->createMock(RequestHandlerInterface::class);
+        $handler1 = $this->createStub(RequestHandlerInterface::class);
+        $handler2 = $this->createStub(RequestHandlerInterface::class);
 
         $locator = new DefaultHandlerLocator();
         // Add routes in order
         $locator->addRoute(Verb::GET, $route1, $handler1);
         $locator->addRoute(Verb::GET, $route2, $handler2);
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
@@ -205,32 +205,32 @@ class DefaultHandlerLocatorTest extends TestCase
      */
     public function testSpecificRoutesCanTakePrecedence(): void
     {
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/users/profile');
 
         // Specific route (static)
-        $specificRoute = $this->createMock(IRoute::class);
+        $specificRoute = $this->createStub(IRoute::class);
         $specificRoute->method('matches')
             ->willReturnCallback(function ($path) {
                 return $path === '/users/profile';
             });
 
         // Generic route (with parameter)
-        $genericRoute = $this->createMock(IRoute::class);
+        $genericRoute = $this->createStub(IRoute::class);
         $genericRoute->method('matches')
             ->willReturnCallback(function ($path) {
                 return preg_match('#^/users/[^/]+$#', $path) === 1;
             });
 
-        $specificHandler = $this->createMock(RequestHandlerInterface::class);
-        $genericHandler = $this->createMock(RequestHandlerInterface::class);
+        $specificHandler = $this->createStub(RequestHandlerInterface::class);
+        $genericHandler = $this->createStub(RequestHandlerInterface::class);
 
         $locator = new DefaultHandlerLocator();
         // Register specific route first
         $locator->addRoute(Verb::GET, $specificRoute, $specificHandler);
         $locator->addRoute(Verb::GET, $genericRoute, $genericHandler);
 
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
@@ -248,22 +248,22 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
 
         // Add routes for different verbs
-        $getRoute = $this->createMock(IRoute::class);
+        $getRoute = $this->createStub(IRoute::class);
         $getRoute->method('matches')->willReturn(true);
-        $getHandler = $this->createMock(RequestHandlerInterface::class);
+        $getHandler = $this->createStub(RequestHandlerInterface::class);
 
-        $postRoute = $this->createMock(IRoute::class);
+        $postRoute = $this->createStub(IRoute::class);
         $postRoute->method('matches')->willReturn(true);
-        $postHandler = $this->createMock(RequestHandlerInterface::class);
+        $postHandler = $this->createStub(RequestHandlerInterface::class);
 
         $locator->addRoute(Verb::GET, $getRoute, $getHandler);
         $locator->addRoute(Verb::POST, $postRoute, $postHandler);
 
         // Test GET request
-        $getUri = $this->createMock(UriInterface::class);
+        $getUri = $this->createStub(UriInterface::class);
         $getUri->method('getPath')->willReturn('/test');
 
-        $getRequest = $this->createMock(ServerRequestInterface::class);
+        $getRequest = $this->createStub(ServerRequestInterface::class);
         $getRequest->method('getMethod')->willReturn('GET');
         $getRequest->method('getUri')->willReturn($getUri);
 
@@ -271,7 +271,7 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->assertSame($getHandler, $result);
 
         // Test POST request
-        $postRequest = $this->createMock(ServerRequestInterface::class);
+        $postRequest = $this->createStub(ServerRequestInterface::class);
         $postRequest->method('getMethod')->willReturn('POST');
         $postRequest->method('getUri')->willReturn($getUri);
 
@@ -287,15 +287,15 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
 
         // Create route and handler
-        $uri = $this->createMock(UriInterface::class);
+        $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/test');
 
         // Add route in a scope that will end
         (function () use ($locator) {
-            $route = $this->createMock(IRoute::class);
+            $route = $this->createStub(IRoute::class);
             $route->method('matches')->with('/test')->willReturn(true);
 
-            $handler = $this->createMock(RequestHandlerInterface::class);
+            $handler = $this->createStub(RequestHandlerInterface::class);
 
             $locator->addRoute(Verb::GET, $route, $handler);
         })();
@@ -304,7 +304,7 @@ class DefaultHandlerLocatorTest extends TestCase
         gc_collect_cycles();
 
         // Route should still be found
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
@@ -321,24 +321,24 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
 
         // Add multiple routes for GET
-        $route1 = $this->createMock(IRoute::class);
+        $route1 = $this->createStub(IRoute::class);
         $route1->method('matches')->willReturnCallback(function ($path) {
             return $path === '/route1';
         });
 
-        $route2 = $this->createMock(IRoute::class);
+        $route2 = $this->createStub(IRoute::class);
         $route2->method('matches')->willReturnCallback(function ($path) {
             return $path === '/route2';
         });
 
-        $route3 = $this->createMock(IRoute::class);
+        $route3 = $this->createStub(IRoute::class);
         $route3->method('matches')->willReturnCallback(function ($path) {
             return $path === '/route3';
         });
 
-        $handler1 = $this->createMock(RequestHandlerInterface::class);
-        $handler2 = $this->createMock(RequestHandlerInterface::class);
-        $handler3 = $this->createMock(RequestHandlerInterface::class);
+        $handler1 = $this->createStub(RequestHandlerInterface::class);
+        $handler2 = $this->createStub(RequestHandlerInterface::class);
+        $handler3 = $this->createStub(RequestHandlerInterface::class);
 
         $locator->addRoute(Verb::GET, $route1, $handler1);
         $locator->addRoute(Verb::GET, $route2, $handler2);
@@ -352,10 +352,10 @@ class DefaultHandlerLocatorTest extends TestCase
         ];
 
         foreach ($paths as $path => $expectedHandler) {
-            $uri = $this->createMock(UriInterface::class);
+            $uri = $this->createStub(UriInterface::class);
             $uri->method('getPath')->willReturn($path);
 
-            $request = $this->createMock(ServerRequestInterface::class);
+            $request = $this->createStub(ServerRequestInterface::class);
             $request->method('getMethod')->willReturn('GET');
             $request->method('getUri')->willReturn($uri);
 

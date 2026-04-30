@@ -45,8 +45,8 @@ class CallableRequestHandlerTest extends TestCase
 
     public function testConstructor(): void
     {
-        $fakedRequest = $this->createMock(ServerRequestInterface::class);
-        $fakedResponse = $this->createMock(ResponseInterface::class);
+        $fakedRequest = $this->createStub(ServerRequestInterface::class);
+        $fakedResponse = $this->createStub(ResponseInterface::class);
         $callable = fn(ServerRequestInterface $request) => $fakedResponse;
         $callableRequestHandler = new CallableRequestHandler($callable);
         $response = $callableRequestHandler->handle($fakedRequest);
