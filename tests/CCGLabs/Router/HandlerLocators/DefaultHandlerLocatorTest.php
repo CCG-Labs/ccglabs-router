@@ -1,32 +1,5 @@
 <?php
 
-/**
- * This file contains Tests\CCGLabs\Router\HandlerLocators\DefaultHandlerLocatorTest
- *
- * Copyright 2025 Brian Reich
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this
- * software and associated documentation files (the “Software”), to deal in the
- * Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so, subject to the
- * following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
- * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
- * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * @author Brian Reich <brian@brianreich.dev>
- * @copyright Copyright (C) 2025 Brian Reich
- * @license MIT
- */
-
 declare(strict_types=1);
 
 namespace Tests\CCGLabs\Router\HandlerLocators;
@@ -35,14 +8,14 @@ use CCGLabs\Router\Exceptions\RouteHandlerNotFoundException;
 use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
 use CCGLabs\Router\HTTP\Verb;
 use CCGLabs\Router\IRoute;
+use CCGLabs\Router\RouteMatch;
 use Exception;
 use InvalidArgumentException;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Server\RequestHandlerInterface;
-use WeakMap;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
 class DefaultHandlerLocatorTest extends TestCase
 {
@@ -64,11 +37,9 @@ class DefaultHandlerLocatorTest extends TestCase
         $verb = Verb::GET;
         $route = $this->createStub(IRoute::class);
         $handler = function (RequestInterface $request): RequestHandlerInterface {
-            // Dummy handler
             return new class implements RequestHandlerInterface {
                 public function handle(RequestInterface $request): \Psr\Http\Message\ResponseInterface
                 {
-                    // Dummy response
                     throw new Exception("Not implemented");
                 }
             };
@@ -126,7 +97,7 @@ class DefaultHandlerLocatorTest extends TestCase
         $uri->method('getPath')->willReturn('/no-match');
 
         $route = $this->createStub(IRoute::class);
-        $route->method('matches')->willReturn(false);
+        $route->method('matches')->willReturn(null);
 
         $locator = new DefaultHandlerLocator();
         $locator->addRoute(Verb::GET, $route, function (RequestInterface $request): RequestHandlerInterface {
@@ -145,13 +116,13 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator->locate($request);
     }
 
-    public function testLocateReturnsMatchingRoute(): void
+    public function testLocateReturnsRouteMatchWithHandlerAndParams(): void
     {
         $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn('/match');
+        $uri->method('getPath')->willReturn('/user/42');
 
         $route = $this->createStub(IRoute::class);
-        $route->method('matches')->willReturn(true);
+        $route->method('matches')->willReturn(['id' => '42']);
 
         $handler = $this->createStub(RequestHandlerInterface::class);
 
@@ -163,30 +134,50 @@ class DefaultHandlerLocatorTest extends TestCase
         $request->method('getUri')->willReturn($uri);
 
         $result = $locator->locate($request);
-        $this->assertSame($handler, $result);
+
+        $this->assertInstanceOf(RouteMatch::class, $result);
+        $this->assertSame($handler, $result->handler);
+        $this->assertSame(['id' => '42'], $result->params);
     }
 
-    /**
-     * Test route precedence - first matching route wins
-     */
+    public function testLocateReturnsRouteMatchWithEmptyParamsForStaticRoute(): void
+    {
+        $uri = $this->createStub(UriInterface::class);
+        $uri->method('getPath')->willReturn('/health');
+
+        $route = $this->createStub(IRoute::class);
+        $route->method('matches')->willReturn([]);
+
+        $handler = $this->createStub(RequestHandlerInterface::class);
+
+        $locator = new DefaultHandlerLocator();
+        $locator->addRoute(Verb::GET, $route, $handler);
+
+        $request = $this->createStub(RequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getUri')->willReturn($uri);
+
+        $result = $locator->locate($request);
+
+        $this->assertSame($handler, $result->handler);
+        $this->assertSame([], $result->params);
+    }
+
     public function testRoutePrecedenceFirstMatchWins(): void
     {
         $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/users/123');
 
-        // Create two routes that both match
         $route1 = $this->createStub(IRoute::class);
-        $route1->method('matches')->with('/users/123')->willReturn(true);
+        $route1->method('matches')->with('/users/123')->willReturn([]);
 
         $route2 = $this->createStub(IRoute::class);
-        $route2->method('matches')->with('/users/123')->willReturn(true);
+        $route2->method('matches')->with('/users/123')->willReturn([]);
 
-        // Create different handlers
         $handler1 = $this->createStub(RequestHandlerInterface::class);
         $handler2 = $this->createStub(RequestHandlerInterface::class);
 
         $locator = new DefaultHandlerLocator();
-        // Add routes in order
         $locator->addRoute(Verb::GET, $route1, $handler1);
         $locator->addRoute(Verb::GET, $route2, $handler2);
 
@@ -196,37 +187,30 @@ class DefaultHandlerLocatorTest extends TestCase
 
         $result = $locator->locate($request);
 
-        // First route should win
-        $this->assertSame($handler1, $result);
+        $this->assertSame($handler1, $result->handler);
     }
 
-    /**
-     * Test that more specific routes can be registered first to take precedence
-     */
     public function testSpecificRoutesCanTakePrecedence(): void
     {
         $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/users/profile');
 
-        // Specific route (static)
         $specificRoute = $this->createStub(IRoute::class);
         $specificRoute->method('matches')
-            ->willReturnCallback(function ($path) {
-                return $path === '/users/profile';
-            });
+            ->willReturnCallback(fn ($path) => $path === '/users/profile' ? [] : null);
 
-        // Generic route (with parameter)
         $genericRoute = $this->createStub(IRoute::class);
         $genericRoute->method('matches')
             ->willReturnCallback(function ($path) {
-                return preg_match('#^/users/[^/]+$#', $path) === 1;
+                return preg_match('#^/users/[^/]+$#', $path) === 1
+                    ? ['user' => 'profile']
+                    : null;
             });
 
         $specificHandler = $this->createStub(RequestHandlerInterface::class);
         $genericHandler = $this->createStub(RequestHandlerInterface::class);
 
         $locator = new DefaultHandlerLocator();
-        // Register specific route first
         $locator->addRoute(Verb::GET, $specificRoute, $specificHandler);
         $locator->addRoute(Verb::GET, $genericRoute, $genericHandler);
 
@@ -236,105 +220,79 @@ class DefaultHandlerLocatorTest extends TestCase
 
         $result = $locator->locate($request);
 
-        // Specific route should win
-        $this->assertSame($specificHandler, $result);
+        $this->assertSame($specificHandler, $result->handler);
     }
 
-    /**
-     * Test WeakMap behavior with Verb enum objects
-     */
-    public function testWeakMapBehaviorWithVerbEnum(): void
+    public function testRoutesAreSegregatedByVerb(): void
     {
         $locator = new DefaultHandlerLocator();
 
-        // Add routes for different verbs
         $getRoute = $this->createStub(IRoute::class);
-        $getRoute->method('matches')->willReturn(true);
+        $getRoute->method('matches')->willReturn([]);
         $getHandler = $this->createStub(RequestHandlerInterface::class);
 
         $postRoute = $this->createStub(IRoute::class);
-        $postRoute->method('matches')->willReturn(true);
+        $postRoute->method('matches')->willReturn([]);
         $postHandler = $this->createStub(RequestHandlerInterface::class);
 
         $locator->addRoute(Verb::GET, $getRoute, $getHandler);
         $locator->addRoute(Verb::POST, $postRoute, $postHandler);
 
-        // Test GET request
-        $getUri = $this->createStub(UriInterface::class);
-        $getUri->method('getPath')->willReturn('/test');
-
-        $getRequest = $this->createStub(ServerRequestInterface::class);
-        $getRequest->method('getMethod')->willReturn('GET');
-        $getRequest->method('getUri')->willReturn($getUri);
-
-        $result = $locator->locate($getRequest);
-        $this->assertSame($getHandler, $result);
-
-        // Test POST request
-        $postRequest = $this->createStub(ServerRequestInterface::class);
-        $postRequest->method('getMethod')->willReturn('POST');
-        $postRequest->method('getUri')->willReturn($getUri);
-
-        $result = $locator->locate($postRequest);
-        $this->assertSame($postHandler, $result);
-    }
-
-    /**
-     * Test that routes are preserved in array and not garbage collected
-     */
-    public function testRoutesNotGarbageCollected(): void
-    {
-        $locator = new DefaultHandlerLocator();
-
-        // Create route and handler
         $uri = $this->createStub(UriInterface::class);
         $uri->method('getPath')->willReturn('/test');
 
-        // Add route in a scope that will end
+        $getRequest = $this->createStub(ServerRequestInterface::class);
+        $getRequest->method('getMethod')->willReturn('GET');
+        $getRequest->method('getUri')->willReturn($uri);
+
+        $this->assertSame($getHandler, $locator->locate($getRequest)->handler);
+
+        $postRequest = $this->createStub(ServerRequestInterface::class);
+        $postRequest->method('getMethod')->willReturn('POST');
+        $postRequest->method('getUri')->willReturn($uri);
+
+        $this->assertSame($postHandler, $locator->locate($postRequest)->handler);
+    }
+
+    public function testRoutesAreNotGarbageCollectedWhenAddedFromInnerScope(): void
+    {
+        $locator = new DefaultHandlerLocator();
+
+        $uri = $this->createStub(UriInterface::class);
+        $uri->method('getPath')->willReturn('/test');
+
+        // Add route from a closure scope that ends.
         (function () use ($locator) {
             $route = $this->createStub(IRoute::class);
-            $route->method('matches')->with('/test')->willReturn(true);
+            $route->method('matches')->with('/test')->willReturn([]);
 
             $handler = $this->createStub(RequestHandlerInterface::class);
 
             $locator->addRoute(Verb::GET, $route, $handler);
         })();
 
-        // Force garbage collection
         gc_collect_cycles();
 
-        // Route should still be found
         $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
-        // This should not throw an exception
         $result = $locator->locate($request);
-        $this->assertInstanceOf(RequestHandlerInterface::class, $result);
+        $this->assertInstanceOf(RouteMatch::class, $result);
     }
 
-    /**
-     * Test multiple routes per verb are maintained
-     */
     public function testMultipleRoutesPerVerb(): void
     {
         $locator = new DefaultHandlerLocator();
 
-        // Add multiple routes for GET
         $route1 = $this->createStub(IRoute::class);
-        $route1->method('matches')->willReturnCallback(function ($path) {
-            return $path === '/route1';
-        });
+        $route1->method('matches')->willReturnCallback(fn ($path) => $path === '/route1' ? [] : null);
 
         $route2 = $this->createStub(IRoute::class);
-        $route2->method('matches')->willReturnCallback(function ($path) {
-            return $path === '/route2';
-        });
+        $route2->method('matches')->willReturnCallback(fn ($path) => $path === '/route2' ? [] : null);
 
         $route3 = $this->createStub(IRoute::class);
-        $route3->method('matches')->willReturnCallback(function ($path) {
-            return $path === '/route3';
-        });
+        $route3->method('matches')->willReturnCallback(fn ($path) => $path === '/route3' ? [] : null);
 
         $handler1 = $this->createStub(RequestHandlerInterface::class);
         $handler2 = $this->createStub(RequestHandlerInterface::class);
@@ -344,7 +302,6 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator->addRoute(Verb::GET, $route2, $handler2);
         $locator->addRoute(Verb::GET, $route3, $handler3);
 
-        // Test each route
         $paths = [
             '/route1' => $handler1,
             '/route2' => $handler2,
@@ -360,7 +317,7 @@ class DefaultHandlerLocatorTest extends TestCase
             $request->method('getUri')->willReturn($uri);
 
             $result = $locator->locate($request);
-            $this->assertSame($expectedHandler, $result, "Failed for path: $path");
+            $this->assertSame($expectedHandler, $result->handler, "Failed for path: $path");
         }
     }
 }

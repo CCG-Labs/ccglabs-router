@@ -65,9 +65,9 @@ $app->get('/hello', function($request) {
 
 // Route with parameters
 $app->get('/user/{id}', function($request) {
-    // The router passes parameters through the route
-    $route = $request->getAttribute('route');
-    $userId = $route->getParameters()['id'];
+    // The router attaches matched parameters to the request.
+    $params = Application::getRouteParams($request);
+    $userId = $params['id'];
 
     return new Response(200, [], "User ID: $userId");
 });
@@ -139,11 +139,19 @@ $app->add(new AuthMiddleware());
 
 ### Route Parameters
 
+Route parameters are attached to the request as a single attribute, keyed by
+the constant `Application::ROUTE_PARAMS_ATTRIBUTE`. The static helper
+`Application::getRouteParams()` reads it for you and returns an empty array
+when the attribute is missing.
+
+Parameter values are URL-decoded with `rawurldecode()` before being delivered
+to the handler — a request to `/search/hello%20world` matching
+`/search/{query}` yields `['query' => 'hello world']`.
+
 ```php
 // Multiple parameters in a route
 $app->get('/posts/{year}/{month}/{slug}', function($request) {
-    $route = $request->getAttribute('route');
-    $params = $route->getParameters();
+    $params = Application::getRouteParams($request);
 
     $year = $params['year'];
     $month = $params['month'];
@@ -154,15 +162,54 @@ $app->get('/posts/{year}/{month}/{slug}', function($request) {
 
 // Parameters can appear anywhere in the route
 $app->get('/{lang}/products/{category}', function($request) {
-    $route = $request->getAttribute('route');
-    $params = $route->getParameters();
+    $params = Application::getRouteParams($request);
 
     $language = $params['lang'];
     $category = $params['category'];
 
     return new Response(200, [], "Language: $language, Category: $category");
 });
+
+// Direct attribute access also works:
+$app->get('/user/{id}', function($request) {
+    $params = $request->getAttribute(Application::ROUTE_PARAMS_ATTRIBUTE);
+    return new Response(200, [], "User: {$params['id']}");
+});
 ```
+
+## Migrating from 2.x
+
+Version 3.0 changes how route parameters reach handlers. The previous
+documented pattern (`$request->getAttribute('route')->getParameters()`)
+never actually worked — the router did not attach the matched route to
+the request. 3.0 fixes this by attaching the extracted parameters
+directly to the request.
+
+**Updating handler code:**
+
+```php
+// 2.x — broken, never worked
+$route = $request->getAttribute('route');
+$userId = $route->getParameters()['id'];
+
+// 3.0
+$params = Application::getRouteParams($request);
+$userId = $params['id'];
+```
+
+**Other breaking changes:**
+
+- `IRoute::matches()` now returns `array<string,string>|null` (parameters on
+  match, `null` on miss) instead of `bool`.
+- `IHandlerLocator::locate()` now returns `RouteMatch` instead of
+  `RequestHandlerInterface`. Custom locator implementations must be updated.
+- `IHandlerLocator::addRoute()` now accepts `callable|RequestHandlerInterface`.
+- The `IParameterizedRoute` interface is removed. Its `getParameters()`
+  contract has been folded into `IRoute::matches()`.
+- Path parameters are now URL-decoded via `rawurldecode()` before delivery
+  to handlers. A request to `/search/hello%20world` matching
+  `/search/{query}` previously yielded `'hello%20world'`; it now yields
+  `'hello world'`.
 
 ## Running Tests
 

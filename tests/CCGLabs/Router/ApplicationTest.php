@@ -1,32 +1,5 @@
 <?php
 
-/**
- * This file contains Tests\CCGLabs\Router\ApplicationTest
- *
- * Copyright 2025 Brian Reich
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this
- * software and associated documentation files (the “Software”), to deal in the
- * Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so, subject to the
- * following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
- * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
- * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * @author Brian Reich <brian@brianreich.dev>
- * @copyright Copyright (C) 2025 Brian Reich
- * @license MIT
- */
-
 declare(strict_types=1);
 
 namespace Tests\CCGLabs\Router;
@@ -36,6 +9,7 @@ use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
 use CCGLabs\Router\HandlerLocators\IHandlerLocator;
 use CCGLabs\Router\HTTP\Verb;
 use CCGLabs\Router\IRoute;
+use CCGLabs\Router\RouteMatch;
 use CCGLabs\Router\Routes\TokenizedRoute;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
@@ -89,6 +63,20 @@ class ApplicationTest extends TestCase
         $application->addRoute(Verb::POST, $route, $handler);
     }
 
+    public function testAddRouteAcceptsRequestHandlerInterface(): void
+    {
+        $route = $this->createStub(IRoute::class);
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $locator = $this->createMock(IHandlerLocator::class);
+        $locator
+            ->expects($this->once())
+            ->method('addRoute')
+            ->with(Verb::GET, $route, $handler);
+
+        $application = new Application($locator);
+        $application->addRoute(Verb::GET, $route, $handler);
+    }
+
     public function testGet(): void
     {
         $verb = Verb::GET;
@@ -98,11 +86,7 @@ class ApplicationTest extends TestCase
         $locator
             ->expects($this->once())
             ->method('addRoute')
-            ->with(
-                $verb,
-                TokenizedRoute::fromPath($route),
-                $callable
-            );
+            ->with($verb, TokenizedRoute::fromPath($route), $callable);
 
         $application = new Application($locator);
         $application->get($route, $callable);
@@ -117,11 +101,7 @@ class ApplicationTest extends TestCase
         $locator
             ->expects($this->once())
             ->method('addRoute')
-            ->with(
-                $verb,
-                TokenizedRoute::fromPath($route),
-                $callable
-            );
+            ->with($verb, TokenizedRoute::fromPath($route), $callable);
 
         $application = new Application($locator);
         $application->post($route, $callable);
@@ -136,11 +116,7 @@ class ApplicationTest extends TestCase
         $locator
             ->expects($this->once())
             ->method('addRoute')
-            ->with(
-                $verb,
-                TokenizedRoute::fromPath($route),
-                $callable
-            );
+            ->with($verb, TokenizedRoute::fromPath($route), $callable);
 
         $application = new Application($locator);
         $application->patch($route, $callable);
@@ -155,11 +131,7 @@ class ApplicationTest extends TestCase
         $locator
             ->expects($this->once())
             ->method('addRoute')
-            ->with(
-                $verb,
-                TokenizedRoute::fromPath($route),
-                $callable
-            );
+            ->with($verb, TokenizedRoute::fromPath($route), $callable);
 
         $application = new Application($locator);
         $application->put($route, $callable);
@@ -174,61 +146,149 @@ class ApplicationTest extends TestCase
         $locator
             ->expects($this->once())
             ->method('addRoute')
-            ->with(
-                $verb,
-                TokenizedRoute::fromPath($route),
-                $callable
-            );
+            ->with($verb, TokenizedRoute::fromPath($route), $callable);
 
         $application = new Application($locator);
         $application->delete($route, $callable);
     }
 
-    /**
-     * Test middleware exception handling
-     */
+    public function testHandleAttachesRouteParamsAttributeToRequest(): void
+    {
+        $params = ['id' => '42'];
+        $response = $this->createStub(ResponseInterface::class);
+
+        $request = $this->createMock(ServerRequestInterface::class);
+        $requestWithAttr = $this->createStub(ServerRequestInterface::class);
+
+        $request->expects($this->once())
+            ->method('withAttribute')
+            ->with(Application::ROUTE_PARAMS_ATTRIBUTE, $params)
+            ->willReturn($requestWithAttr);
+
+        $handler = $this->createMock(RequestHandlerInterface::class);
+        $handler->expects($this->once())
+            ->method('handle')
+            ->with($requestWithAttr)
+            ->willReturn($response);
+
+        $locator = $this->createMock(IHandlerLocator::class);
+        $locator->expects($this->once())
+            ->method('locate')
+            ->with($request)
+            ->willReturn(new RouteMatch($handler, $params));
+
+        $application = new Application($locator);
+        $result = $application->handle($request);
+        $this->assertSame($response, $result);
+    }
+
+    public function testHandleAttachesEmptyParamsForStaticRoute(): void
+    {
+        $response = $this->createStub(ResponseInterface::class);
+
+        $request = $this->createMock(ServerRequestInterface::class);
+        $requestWithAttr = $this->createStub(ServerRequestInterface::class);
+
+        $request->expects($this->once())
+            ->method('withAttribute')
+            ->with(Application::ROUTE_PARAMS_ATTRIBUTE, [])
+            ->willReturn($requestWithAttr);
+
+        $handler = $this->createMock(RequestHandlerInterface::class);
+        $handler->expects($this->once())
+            ->method('handle')
+            ->with($requestWithAttr)
+            ->willReturn($response);
+
+        $locator = $this->createStub(IHandlerLocator::class);
+        $locator->method('locate')->willReturn(new RouteMatch($handler));
+
+        $application = new Application($locator);
+        $application->handle($request);
+    }
+
+    public function testMiddlewareReceivesRequestWithRouteParamsAttribute(): void
+    {
+        $params = ['id' => '42'];
+        $response = $this->createStub(ResponseInterface::class);
+
+        $request = $this->createStub(ServerRequestInterface::class);
+        $requestWithAttr = $this->createStub(ServerRequestInterface::class);
+
+        $request->method('withAttribute')
+            ->with(Application::ROUTE_PARAMS_ATTRIBUTE, $params)
+            ->willReturn($requestWithAttr);
+
+        $middleware = $this->createMock(MiddlewareInterface::class);
+        $middleware->expects($this->once())
+            ->method('process')
+            ->with($requestWithAttr, $this->isInstanceOf(RequestHandlerInterface::class))
+            ->willReturn($response);
+
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $locator = $this->createStub(IHandlerLocator::class);
+        $locator->method('locate')->willReturn(new RouteMatch($handler, $params));
+
+        $application = new Application($locator);
+        $application->add($middleware);
+
+        $application->handle($request);
+    }
+
+    public function testGetRouteParamsHelperReturnsAttribute(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getAttribute')
+            ->with(Application::ROUTE_PARAMS_ATTRIBUTE)
+            ->willReturn(['id' => '42']);
+
+        $this->assertSame(['id' => '42'], Application::getRouteParams($request));
+    }
+
+    public function testGetRouteParamsHelperReturnsEmptyArrayWhenAttributeMissing(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getAttribute')
+            ->with(Application::ROUTE_PARAMS_ATTRIBUTE)
+            ->willReturn(null);
+
+        $this->assertSame([], Application::getRouteParams($request));
+    }
+
     public function testMiddlewareExceptionHandling(): void
     {
         $request = $this->createStub(ServerRequestInterface::class);
-        $response = $this->createStub(ResponseInterface::class);
+        $request->method('withAttribute')->willReturnSelf();
 
-        // Create a handler that will be called
         $handler = $this->createMock(RequestHandlerInterface::class);
-        $handler->expects($this->never())
-            ->method('handle');
+        $handler->expects($this->never())->method('handle');
 
-        // Create a middleware that throws an exception
         $middleware = $this->createMock(MiddlewareInterface::class);
         $middleware->expects($this->once())
             ->method('process')
             ->willThrowException(new \RuntimeException('Middleware error'));
 
-        // Setup locator to return the handler
         $locator = $this->createMock(IHandlerLocator::class);
         $locator->expects($this->once())
             ->method('locate')
             ->with($request)
-            ->willReturn($handler);
+            ->willReturn(new RouteMatch($handler));
 
         $application = new Application($locator);
         $application->add($middleware);
 
-        // Exception should propagate
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Middleware error');
         $application->handle($request);
     }
 
-    /**
-     * Test multiple middleware execution order
-     */
     public function testMultipleMiddlewareExecutionOrder(): void
     {
         $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('withAttribute')->willReturnSelf();
         $response = $this->createStub(ResponseInterface::class);
         $executionOrder = [];
 
-        // Create final handler
         $handler = $this->createMock(RequestHandlerInterface::class);
         $handler->expects($this->once())
             ->method('handle')
@@ -237,7 +297,6 @@ class ApplicationTest extends TestCase
                 return $response;
             });
 
-        // Create first middleware
         $middleware1 = $this->createMock(MiddlewareInterface::class);
         $middleware1->expects($this->once())
             ->method('process')
@@ -248,7 +307,6 @@ class ApplicationTest extends TestCase
                 return $response;
             });
 
-        // Create second middleware
         $middleware2 = $this->createMock(MiddlewareInterface::class);
         $middleware2->expects($this->once())
             ->method('process')
@@ -259,7 +317,6 @@ class ApplicationTest extends TestCase
                 return $response;
             });
 
-        // Create third middleware
         $middleware3 = $this->createMock(MiddlewareInterface::class);
         $middleware3->expects($this->once())
             ->method('process')
@@ -270,11 +327,10 @@ class ApplicationTest extends TestCase
                 return $response;
             });
 
-        // Setup locator
         $locator = $this->createMock(IHandlerLocator::class);
         $locator->expects($this->once())
             ->method('locate')
-            ->willReturn($handler);
+            ->willReturn(new RouteMatch($handler));
 
         $application = new Application($locator);
         $application->add($middleware1);
@@ -283,7 +339,6 @@ class ApplicationTest extends TestCase
 
         $result = $application->handle($request);
 
-        // Verify execution order (onion model)
         $expectedOrder = [
             'middleware1-before',
             'middleware2-before',
@@ -298,20 +353,15 @@ class ApplicationTest extends TestCase
         $this->assertSame($response, $result);
     }
 
-    /**
-     * Test middleware can short-circuit the chain
-     */
     public function testMiddlewareCanShortCircuit(): void
     {
         $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('withAttribute')->willReturnSelf();
         $shortCircuitResponse = $this->createStub(ResponseInterface::class);
 
-        // Handler should never be called
         $handler = $this->createMock(RequestHandlerInterface::class);
-        $handler->expects($this->never())
-            ->method('handle');
+        $handler->expects($this->never())->method('handle');
 
-        // Middleware that short-circuits
         $middleware = $this->createMock(MiddlewareInterface::class);
         $middleware->expects($this->once())
             ->method('process')
@@ -320,7 +370,7 @@ class ApplicationTest extends TestCase
         $locator = $this->createMock(IHandlerLocator::class);
         $locator->expects($this->once())
             ->method('locate')
-            ->willReturn($handler);
+            ->willReturn(new RouteMatch($handler));
 
         $application = new Application($locator);
         $application->add($middleware);
@@ -329,34 +379,28 @@ class ApplicationTest extends TestCase
         $this->assertSame($shortCircuitResponse, $result);
     }
 
-    /**
-     * Test middleware can modify request
-     */
     public function testMiddlewareCanModifyRequest(): void
     {
         $originalRequest = $this->createStub(ServerRequestInterface::class);
+        $originalRequest->method('withAttribute')->willReturnSelf();
         $modifiedRequest = $this->createStub(ServerRequestInterface::class);
         $response = $this->createStub(ResponseInterface::class);
 
-        // Handler should receive modified request
         $handler = $this->createMock(RequestHandlerInterface::class);
         $handler->expects($this->once())
             ->method('handle')
             ->with($modifiedRequest)
             ->willReturn($response);
 
-        // Middleware that modifies request
         $middleware = $this->createMock(MiddlewareInterface::class);
         $middleware->expects($this->once())
             ->method('process')
-            ->willReturnCallback(function ($req, $handler) use ($modifiedRequest) {
-                return $handler->handle($modifiedRequest);
-            });
+            ->willReturnCallback(fn ($req, $handler) => $handler->handle($modifiedRequest));
 
         $locator = $this->createMock(IHandlerLocator::class);
         $locator->expects($this->once())
             ->method('locate')
-            ->willReturn($handler);
+            ->willReturn(new RouteMatch($handler));
 
         $application = new Application($locator);
         $application->add($middleware);

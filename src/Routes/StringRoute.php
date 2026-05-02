@@ -47,10 +47,10 @@ class StringRoute implements IRoute
     }
 
     /**
-     * Returns true if the path is identical to the route.
+     * Returns an empty array if the path is identical to the route, otherwise null.
      */
-    public function matches(string $path): bool
+    public function matches(string $path): ?array
     {
-        return $path === $this->route;
+        return $path === $this->route ? [] : null;
     }
 }

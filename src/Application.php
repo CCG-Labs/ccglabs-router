@@ -1,32 +1,5 @@
 <?php
 
-/**
- * This file contains CCGLabs\Router\Application
- *
- * Copyright 2025 Brian Reich
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this
- * software and associated documentation files (the “Software”), to deal in the
- * Software without restriction, including without limitation the rights to use, copy,
- * modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
- * and to permit persons to whom the Software is furnished to do so, subject to the
- * following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
- * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
- * OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * @author Brian Reich <brian@brianreich.dev>
- * @copyright Copyright (C) 2025 Brian Reich
- * @license MIT
- */
-
 declare(strict_types=1);
 
 namespace CCGLabs\Router;
@@ -43,24 +16,23 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Application is the application front controller.
  *
- * The Application defines routes and makes routes to handlers.
+ * The Application defines routes and dispatches requests to handlers. After
+ * locating the handler for a request, Application attaches the route's
+ * extracted parameters to the request as the ROUTE_PARAMS_ATTRIBUTE attribute
+ * before invoking the middleware chain. Handlers and middleware can read
+ * route parameters via Application::getRouteParams($request).
  */
 class Application implements RequestHandlerInterface
 {
     /**
-     * Collection of added middlewares.
-     *
-     * @var MiddlewareInterface[]
+     * Name of the request attribute under which the router stores parameters
+     * extracted from the matched route path.
      */
+    public const ROUTE_PARAMS_ATTRIBUTE = 'route_params';
+
+    /** @var MiddlewareInterface[] */
     protected array $middlewares = [];
 
-    /**
-     * Creates a new Application.
-     *
-     * The constructor allows the caller to specify an IHandlerLocator, which
-     * is a component responsible for mapping routes to handlers. If one is
-     * not specified, the DefaultHandlerLocator is used.
-     */
     public function __construct(
         private IHandlerLocator $handlerLocator = new DefaultHandlerLocator()
     ) {
@@ -71,29 +43,23 @@ class Application implements RequestHandlerInterface
         return $this->handlerLocator;
     }
 
-    /**
-     * Handles a request and produces a response.
-     *
-     * May call other collaborating code to generate the response.
-     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $requestHandler = $this->getHandlerLocator()->locate($request);
+        $match = $this->getHandlerLocator()->locate($request);
+        $request = $request->withAttribute(self::ROUTE_PARAMS_ATTRIBUTE, $match->params);
 
-        // If there are no middlewares, then just handle the request.
         if (empty($this->middlewares)) {
-            return $requestHandler->handle($request);
+            return $match->handler->handle($request);
         }
 
-        // Build the middleware chain by wrapping handlers from the inside out
-        $handler = $requestHandler;
+        $handler = $match->handler;
         for ($index = count($this->middlewares) - 1; $index >= 0; $index--) {
             $middleware = $this->middlewares[$index];
             $nextHandler = $handler;
             $handler = new class ($middleware, $nextHandler) implements RequestHandlerInterface {
                 public function __construct(
                     private MiddlewareInterface $middleware,
-                    private RequestHandlerInterface $handler
+                    private RequestHandlerInterface $handler,
                 ) {
                 }
 
@@ -107,42 +73,53 @@ class Application implements RequestHandlerInterface
         return $handler->handle($request);
     }
 
-    public function get(string $route, callable $handler): self
+    /**
+     * Convenience accessor for parameters extracted by the router from
+     * the matched route path. Returns an empty array if the request was
+     * not dispatched through Application::handle().
+     *
+     * @return array<string, string>
+     */
+    public static function getRouteParams(ServerRequestInterface $request): array
+    {
+        return $request->getAttribute(self::ROUTE_PARAMS_ATTRIBUTE) ?? [];
+    }
+
+    public function get(string $route, callable|RequestHandlerInterface $handler): self
     {
         return $this->addRoute(Verb::GET, $route, $handler);
     }
 
-    public function post(string $route, callable $handler): self
+    public function post(string $route, callable|RequestHandlerInterface $handler): self
     {
         return $this->addRoute(Verb::POST, $route, $handler);
     }
 
-    public function patch(string $route, callable $handler): self
+    public function patch(string $route, callable|RequestHandlerInterface $handler): self
     {
         return $this->addRoute(Verb::PATCH, $route, $handler);
     }
 
-    public function put(string $route, callable $handler): self
+    public function put(string $route, callable|RequestHandlerInterface $handler): self
     {
         return $this->addRoute(Verb::PUT, $route, $handler);
     }
 
-    public function delete(string $route, callable $handler): self
+    public function delete(string $route, callable|RequestHandlerInterface $handler): self
     {
         return $this->addRoute(Verb::DELETE, $route, $handler);
     }
 
-    public function addRoute(Verb $verb, string|IRoute $route, callable $handler): self
-    {
-        $routeObject = $route;
-
-        // If the route is specified as a string, automatically convert it to
-        // a tokenized route.
+    public function addRoute(
+        Verb $verb,
+        string|IRoute $route,
+        callable|RequestHandlerInterface $handler
+    ): self {
         if (is_string($route)) {
-            $routeObject = TokenizedRoute::fromPath($route);
+            $route = TokenizedRoute::fromPath($route);
         }
 
-        $this->getHandlerLocator()->addRoute($verb, $routeObject, $handler);
+        $this->getHandlerLocator()->addRoute($verb, $route, $handler);
         return $this;
     }
 
