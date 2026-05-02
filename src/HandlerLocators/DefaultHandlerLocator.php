@@ -12,7 +12,6 @@ use CCGLabs\Router\RouteMatch;
 use InvalidArgumentException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use WeakMap;
 
 /**
  * Maps requests to the route and handler that should process them.
@@ -27,32 +26,23 @@ class DefaultHandlerLocator implements IHandlerLocator
     public const ERROR_HANDLER_NOT_FOUND = 'Handler not found for %s';
 
     /**
-     * Routes keyed by HTTP verb. Each value is a list of route/handler pairs
-     * to be checked in registration order.
+     * Routes keyed by HTTP verb value (e.g. "GET", "POST"). Each value is a
+     * list of route/handler pairs to be checked in registration order.
      *
-     * @var WeakMap<Verb, array<array{route: IRoute, handler: RequestHandlerInterface}>>
+     * @var array<string, list<array{route: IRoute, handler: RequestHandlerInterface}>>
      */
-    protected WeakMap $routes;
-
-    public function __construct()
-    {
-        $this->routes = new WeakMap();
-    }
+    protected array $routes = [];
 
     public function addRoute(
         Verb $verb,
         IRoute $route,
         callable|RequestHandlerInterface $handler
     ): self {
-        if (! isset($this->routes[$verb])) {
-            $this->routes[$verb] = [];
-        }
-
         if (is_callable($handler)) {
             $handler = new CallableRequestHandler($handler);
         }
 
-        $this->routes[$verb][] = ['route' => $route, 'handler' => $handler];
+        $this->routes[$verb->value][] = ['route' => $route, 'handler' => $handler];
         return $this;
     }
 
@@ -69,14 +59,7 @@ class DefaultHandlerLocator implements IHandlerLocator
 
         $path = $request->getUri()->getPath();
 
-        if (! isset($this->routes[$verb])) {
-            throw new RouteHandlerNotFoundException(
-                $request,
-                sprintf(self::ERROR_HANDLER_NOT_FOUND, $path)
-            );
-        }
-
-        foreach ($this->routes[$verb] as $routeData) {
+        foreach ($this->routes[$verb->value] ?? [] as $routeData) {
             $params = $routeData['route']->matches($path);
             if ($params !== null) {
                 return new RouteMatch($routeData['handler'], $params);

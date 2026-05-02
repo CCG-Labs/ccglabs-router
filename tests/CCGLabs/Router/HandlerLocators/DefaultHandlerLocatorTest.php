@@ -254,33 +254,6 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->assertSame($postHandler, $locator->locate($postRequest)->handler);
     }
 
-    public function testRoutesAreNotGarbageCollectedWhenAddedFromInnerScope(): void
-    {
-        $locator = new DefaultHandlerLocator();
-
-        $uri = $this->createStub(UriInterface::class);
-        $uri->method('getPath')->willReturn('/test');
-
-        // Add route from a closure scope that ends.
-        (function () use ($locator) {
-            $route = $this->createStub(IRoute::class);
-            $route->method('matches')->with('/test')->willReturn([]);
-
-            $handler = $this->createStub(RequestHandlerInterface::class);
-
-            $locator->addRoute(Verb::GET, $route, $handler);
-        })();
-
-        gc_collect_cycles();
-
-        $request = $this->createStub(ServerRequestInterface::class);
-        $request->method('getMethod')->willReturn('GET');
-        $request->method('getUri')->willReturn($uri);
-
-        $result = $locator->locate($request);
-        $this->assertInstanceOf(RouteMatch::class, $result);
-    }
-
     public function testMultipleRoutesPerVerb(): void
     {
         $locator = new DefaultHandlerLocator();
