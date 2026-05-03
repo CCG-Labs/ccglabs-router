@@ -58,6 +58,22 @@ class TokenizedRoute implements IRenderableRoute
     }
 
     /**
+     * Returns the tokens that make up this route.
+     *
+     * Primarily intended for cache persistence: callers that have a route
+     * object and want to round-trip its parsed structure to disk can read
+     * the token list here and reconstruct the route via the constructor
+     * (which skips fromPath()'s validation, since the tokens were already
+     * validated when first parsed).
+     *
+     * @return string[]
+     */
+    public function getTokens(): array
+    {
+        return $this->tokens;
+    }
+
+    /**
      * Creates a TokenizedRoute from a string by splitting it on the path
      * separator ("/").
      *

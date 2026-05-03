@@ -441,4 +441,19 @@ class TokenizedRouteTest extends TestCase
         $route = TokenizedRoute::fromPath('/');
         $this->assertSame('/', $route->render());
     }
+
+    public function testGetTokensReturnsConstructorTokens(): void
+    {
+        $tokens = ['users', '{id}', 'profile'];
+        $route = new TokenizedRoute($tokens);
+
+        $this->assertSame($tokens, $route->getTokens());
+    }
+
+    public function testGetTokensReturnsParsedTokensFromFromPath(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/{id}');
+
+        $this->assertSame(['', 'users', '{id}'], $route->getTokens());
+    }
 }

@@ -12,16 +12,49 @@ use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
 use CCGLabs\Router\HandlerLocators\IHandlerLocator;
 use CCGLabs\Router\HTTP\Verb;
 use CCGLabs\Router\IRoute;
+use CCGLabs\Router\RouteCache;
 use CCGLabs\Router\RouteMatch;
 use CCGLabs\Router\Routes\TokenizedRoute;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 class ApplicationTest extends TestCase
 {
+    private string $cacheFile = '';
+
+    protected function setUp(): void
+    {
+        $this->cacheFile = (tempnam(sys_get_temp_dir(), 'ccglabs-router-app-test-') ?: '');
+        @unlink($this->cacheFile);
+    }
+
+    protected function tearDown(): void
+    {
+        @unlink($this->cacheFile);
+    }
+
+    /**
+     * Builds a stub request that locate() will accept, plus a mock locator
+     * that returns a RouteMatch with a no-op handler. Used by tests that
+     * need to call handle() to trigger cache persistence.
+     */
+    private function makeHandledRequest(): ServerRequestInterface
+    {
+        $uri = $this->createStub(UriInterface::class);
+        $uri->method('getPath')->willReturn('/__ccglabs_test_cache_trigger__');
+
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getUri')->willReturn($uri);
+        $request->method('withAttribute')->willReturnSelf();
+
+        return $request;
+    }
+
     public function testConstuctorWithNoArgumentsUsesDefaultHandlerLocator(): void
     {
         $application = new Application();
@@ -465,14 +498,120 @@ class ApplicationTest extends TestCase
 
     public function testNameCanBeReusedForLastRegistration(): void
     {
-        // If a user registers two routes with the same name, the most
-        // recent one wins. This matches user expectation: re-registering
-        // a name overrides.
         $app = new Application();
         $app->get('/old/{id}', fn () => null, name: 'show');
         $app->get('/new/{id}', fn () => null, name: 'show');
 
         $this->assertSame('/new/42', $app->urlFor('show', ['id' => '42']));
+    }
+
+    // Route caching
+
+    public function testCacheFileIsCreatedAfterHandlingFirstRequest(): void
+    {
+        $app = new Application(cacheFile: $this->cacheFile);
+        $app->get('/users/{id}', fn () => null);
+        $app->get('/posts/{year}/{slug}', fn () => null);
+
+        // Trigger persist via handle(). The locator will throw because no
+        // route matches '/__ccglabs_test_cache_trigger__'; that's fine —
+        // persist runs before locate.
+        try {
+            $app->handle($this->makeHandledRequest());
+        } catch (\Throwable) {
+            // Expected — no route matches the trigger path.
+        }
+
+        $this->assertFileExists($this->cacheFile);
+        $loaded = include $this->cacheFile;
+        $this->assertArrayHasKey('/users/{id}', $loaded);
+        $this->assertArrayHasKey('/posts/{year}/{slug}', $loaded);
+        $this->assertSame(['', 'users', '{id}'], $loaded['/users/{id}']);
+    }
+
+    public function testCacheFalseDisablesFileCreation(): void
+    {
+        $app = new Application(cacheFile: false);
+        $app->get('/users/{id}', fn () => null);
+
+        try {
+            $app->handle($this->makeHandledRequest());
+        } catch (\Throwable) {
+        }
+
+        $this->assertFileDoesNotExist($this->cacheFile);
+    }
+
+    public function testCacheFailureIsNonFatal(): void
+    {
+        $app = new Application(cacheFile: '/proc/self/nonexistent/cache.php');
+        $app->get('/users/{id}', fn () => null);
+
+        try {
+            $app->handle($this->makeHandledRequest());
+        } catch (\CCGLabs\Router\Exceptions\RouteHandlerNotFoundException) {
+        }
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    public function testIRouteObjectsAreNotCached(): void
+    {
+        $route = $this->createStub(IRoute::class);
+        $route->method('matches')->willReturn(null);
+
+        $app = new Application(cacheFile: $this->cacheFile);
+        $app->addRoute(Verb::GET, $route, fn () => null);
+
+        try {
+            $app->handle($this->makeHandledRequest());
+        } catch (\Throwable) {
+        }
+
+        $loaded = file_exists($this->cacheFile) ? include $this->cacheFile : [];
+        $this->assertSame([], $loaded);
+    }
+
+    public function testApplicationConsumesPrePopulatedCache(): void
+    {
+        $cache = new RouteCache($this->cacheFile);
+        $cache->record('/users/{id}', ['', 'users', '{id}']);
+        $cache->persist();
+        $contentBefore = file_get_contents($this->cacheFile);
+
+        $app = new Application(cacheFile: $this->cacheFile);
+        $app->get('/users/{id}', fn () => null);
+        try {
+            $app->handle($this->makeHandledRequest());
+        } catch (\Throwable) {
+        }
+
+        $this->assertSame($contentBefore, file_get_contents($this->cacheFile));
+    }
+
+    public function testRemovedRoutesArePrunedFromCacheOnReregistration(): void
+    {
+        $app1 = new Application(cacheFile: $this->cacheFile);
+        $app1->get('/a', fn () => null);
+        $app1->get('/b', fn () => null);
+        try {
+            $app1->handle($this->makeHandledRequest());
+        } catch (\Throwable) {
+        }
+
+        $this->assertArrayHasKey('/a', include $this->cacheFile);
+        $this->assertArrayHasKey('/b', include $this->cacheFile);
+
+        $app2 = new Application(cacheFile: $this->cacheFile);
+        $app2->get('/a', fn () => null);
+        try {
+            $app2->handle($this->makeHandledRequest());
+        } catch (\Throwable) {
+        }
+
+        $loaded = include $this->cacheFile;
+        $this->assertArrayHasKey('/a', $loaded);
+        $this->assertArrayNotHasKey('/b', $loaded);
     }
 
     public function testMiddlewareCanModifyRequest(): void

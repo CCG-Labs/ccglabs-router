@@ -26,6 +26,12 @@ use Psr\Http\Server\RequestHandlerInterface;
  *
  * Routes registered with a $name argument can be referenced by that name
  * via Application::urlFor() to build URL paths from parameter values.
+ *
+ * String routes registered via addRoute() (or the get/post/etc. helpers) are
+ * cached: their parsed token list is persisted to a PHP file so the parsing
+ * cost is skipped on subsequent requests. Caching is implicit and defensive
+ * — failures to read or write the cache never throw. Pass `cacheFile: false`
+ * to disable caching entirely.
  */
 class Application implements RequestHandlerInterface
 {
@@ -46,9 +52,16 @@ class Application implements RequestHandlerInterface
      */
     protected array $namedRoutes = [];
 
+    private RouteCache $cache;
+
     public function __construct(
-        private IHandlerLocator $handlerLocator = new DefaultHandlerLocator()
+        private IHandlerLocator $handlerLocator = new DefaultHandlerLocator(),
+        string|false|null $cacheFile = null,
     ) {
+        if ($cacheFile === null) {
+            $cacheFile = RouteCache::defaultPath();
+        }
+        $this->cache = new RouteCache($cacheFile);
     }
 
     public function getHandlerLocator(): IHandlerLocator
@@ -58,6 +71,8 @@ class Application implements RequestHandlerInterface
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
+        $this->cache->persist();
+
         $match = $this->getHandlerLocator()->locate($request);
         $request = $request->withAttribute(self::ROUTE_PARAMS_ATTRIBUTE, $match->params);
 
@@ -163,7 +178,7 @@ class Application implements RequestHandlerInterface
         ?string $name = null,
     ): self {
         if (is_string($route)) {
-            $route = TokenizedRoute::fromPath($route);
+            $route = $this->resolveTokenizedRoute($route);
         }
 
         if ($name !== null) {
@@ -178,5 +193,18 @@ class Application implements RequestHandlerInterface
     {
         $this->middlewares[] = $middleware;
         return $this;
+    }
+
+    private function resolveTokenizedRoute(string $path): TokenizedRoute
+    {
+        $cached = $this->cache->getCached($path);
+        if ($cached !== null) {
+            return new TokenizedRoute($cached);
+        }
+
+        $route = TokenizedRoute::fromPath($path);
+        $this->cache->record($path, $route->getTokens());
+
+        return $route;
     }
 }
