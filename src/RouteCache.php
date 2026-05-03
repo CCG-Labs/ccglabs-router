@@ -63,6 +63,14 @@ class RouteCache
     private bool $dirty = false;
 
     /**
+     * Whether persist() has already done its work successfully this run.
+     * Used to short-circuit on the request hot path: persist() is called
+     * from Application::handle() on every request, but the cache shape
+     * cannot change during dispatch, so we only need to act once.
+     */
+    private bool $persisted = false;
+
+    /**
      * @param string|false $path Path to the cache file, or false to disable caching.
      */
     public function __construct(private string|false $path)
@@ -111,24 +119,31 @@ class RouteCache
 
     /**
      * Writes the cache file if anything changed during this run.
+     * Idempotent: subsequent calls after a successful run are cheap no-ops.
      * Silently no-ops if caching is disabled. Silently swallows write
-     * failures (e.g. unwritable destination).
+     * failures; if the write fails, the next call will retry.
      */
     public function persist(): void
     {
-        if ($this->path === false) {
+        if ($this->persisted) {
             return;
         }
 
-        // Detect entries that were in the cache but never touched this run.
-        // Those are routes that have been removed from user code; prune them.
-        $stale = array_diff_key($this->tokens, $this->touched);
-        if (! empty($stale)) {
-            $this->tokens = array_intersect_key($this->tokens, $this->touched);
+        if ($this->path === false) {
+            $this->persisted = true;
+            return;
+        }
+
+        // Routes still in $tokens but not in $touched were removed from
+        // user code since the cache was last written; drop them.
+        $pruned = array_intersect_key($this->tokens, $this->touched);
+        if (count($pruned) !== count($this->tokens)) {
+            $this->tokens = $pruned;
             $this->dirty = true;
         }
 
         if (! $this->dirty) {
+            $this->persisted = true;
             return;
         }
 
@@ -139,24 +154,24 @@ class RouteCache
             if (! is_dir($dir)) {
                 @mkdir($dir, 0755, true);
             }
-            @file_put_contents($this->path, $contents, LOCK_EX);
+            $bytes = @file_put_contents($this->path, $contents, LOCK_EX);
+            if ($bytes !== false) {
+                $this->dirty = false;
+                $this->persisted = true;
+            }
         } catch (Throwable) {
             // Caching is best-effort. Failures are silent by design.
         }
-
-        $this->dirty = false;
     }
 
     /**
      * Loads the cache file if it exists. Silently no-ops on read or
-     * parse failure.
+     * parse failure. @include returns false (with suppressed warning)
+     * when the file is missing or unreadable, so an explicit existence
+     * check would be redundant.
      */
     private function load(): void
     {
-        if (! is_string($this->path) || ! is_file($this->path) || ! is_readable($this->path)) {
-            return;
-        }
-
         try {
             $loaded = @include $this->path;
             if (is_array($loaded)) {

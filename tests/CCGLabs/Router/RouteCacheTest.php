@@ -95,6 +95,27 @@ class RouteCacheTest extends TestCase
         $this->assertSame(['', 'new'], $thirdLoad->getCached('/new'));
     }
 
+    public function testRepeatPersistIsAOneShotNoop(): void
+    {
+        // First persist writes the file.
+        $cache = new RouteCache($this->tempFile);
+        $cache->record('/users/{id}', ['', 'users', '{id}']);
+        $cache->persist();
+
+        $mtimeAfterFirst = filemtime($this->tempFile);
+        clearstatcache(true, $this->tempFile);
+
+        // Wait long enough that a second write would update mtime.
+        usleep(10_000);
+
+        // Second persist must not re-write — the cache shape hasn't
+        // changed and persist() is on the request hot path.
+        $cache->persist();
+
+        clearstatcache(true, $this->tempFile);
+        $this->assertSame($mtimeAfterFirst, filemtime($this->tempFile));
+    }
+
     public function testPersistIsNoopWhenDisabled(): void
     {
         $cache = new RouteCache(false);
