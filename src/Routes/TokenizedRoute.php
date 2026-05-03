@@ -28,7 +28,8 @@ class TokenizedRoute implements IParameterizedRoute
     public const ERROR_INVALID_TOKEN = '"%s" is an invalid url token';
     public const ERROR_INVALID_PATH = 'Invalid route path: %s';
     public const ERROR_EMPTY_PARAMETER = 'Empty parameter names are not allowed';
-    public const ERROR_INVALID_PARAMETER_NAME = 'Invalid parameter name "%s": must contain only letters, numbers, and underscores, and start with a letter or underscore';
+    public const ERROR_INVALID_PARAMETER_NAME = 'Invalid parameter name "%s": must contain only '
+        . 'letters, numbers, and underscores, and start with a letter or underscore';
     public const ERROR_DUPLICATE_PARAMETER = 'Duplicate parameter name "%s" in route path';
     public const ERROR_PATH_TOO_LONG = 'Route path exceeds maximum length of %d characters';
     public const ERROR_TOO_MANY_SEGMENTS = 'Route path exceeds maximum of %d segments';
