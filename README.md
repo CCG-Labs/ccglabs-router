@@ -206,6 +206,33 @@ registered, and `RouteNotRenderableException` when the named route's
 `IRoute` implementation does not also implement `IRenderableRoute`
 (the built-in `TokenizedRoute` and `StringRoute` both do).
 
+### Route Caching
+
+Route patterns are parsed once and cached to a PHP file so that subsequent
+requests skip the parsing cost. Caching is on by default and uses a path
+under the system temp directory derived from the current working
+directory.
+
+```php
+// Default — caching enabled at sys_get_temp_dir() . '/ccglabs-router-...'
+$app = new Application();
+
+// Explicit cache file path
+$app = new Application(cacheFile: __DIR__ . '/cache/routes.php');
+
+// Disable caching
+$app = new Application(cacheFile: false);
+```
+
+Only the parsed route token lists are cached — handlers stay in your
+code and run on every request as usual. Cache failures (unwritable
+path, corrupt cache file) are silently swallowed: the application
+continues to work without caching rather than throwing.
+
+The cache invalidates itself when registered routes change. If a route
+is removed from your code, its entry is pruned from the cache on the
+next request that registers a different set of routes.
+
 ## Migrating from 2.x
 
 Version 3.0 changes how route parameters reach handlers. The previous
