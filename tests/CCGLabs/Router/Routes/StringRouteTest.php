@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\CCGLabs\Router\Routes;
 
+use CCGLabs\Router\IRenderableRoute;
 use CCGLabs\Router\Routes\StringRoute;
 use PHPUnit\Framework\TestCase;
 
@@ -25,5 +26,23 @@ class StringRouteTest extends TestCase
     {
         $route = new StringRoute('/users/me');
         $this->assertNull($route->matches('/users/somebodyelse'));
+    }
+
+    public function testIsRenderable(): void
+    {
+        $route = new StringRoute('/users/me');
+        $this->assertInstanceOf(IRenderableRoute::class, $route);
+    }
+
+    public function testRenderReturnsRouteStringVerbatim(): void
+    {
+        $route = new StringRoute('/users/me');
+        $this->assertSame('/users/me', $route->render());
+    }
+
+    public function testRenderIgnoresProvidedParameters(): void
+    {
+        $route = new StringRoute('/users/me');
+        $this->assertSame('/users/me', $route->render(['anything' => 'ignored']));
     }
 }

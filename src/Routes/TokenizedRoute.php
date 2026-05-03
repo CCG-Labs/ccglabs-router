@@ -8,8 +8,11 @@ declare(strict_types=1);
 
 namespace CCGLabs\Router\Routes;
 
+use CCGLabs\Router\Exceptions\MissingRouteParameterException;
+use CCGLabs\Router\IRenderableRoute;
 use CCGLabs\Router\IRoute;
 use InvalidArgumentException;
+use Stringable;
 
 /**
  * A TokenizedRoute is a route which may specify named tokens as part of the
@@ -24,7 +27,7 @@ use InvalidArgumentException;
  *
  * Parameter values are URL-decoded via rawurldecode() before being returned.
  */
-class TokenizedRoute implements IRoute
+class TokenizedRoute implements IRenderableRoute
 {
     public const PATH_SEPARATOR = '/';
     public const ERROR_INVALID_TOKEN = '"%s" is an invalid url token';
@@ -35,6 +38,7 @@ class TokenizedRoute implements IRoute
     public const ERROR_PATH_TOO_LONG = 'Route path exceeds maximum length of %d characters';
     public const ERROR_TOO_MANY_SEGMENTS = 'Route path exceeds maximum of %d segments';
     public const ERROR_SEGMENT_TOO_LONG = 'Route segment "%s" exceeds maximum length of %d characters';
+    public const ERROR_MISSING_PARAMETER = 'Missing required route parameter "%s"';
 
     public const MAX_PATH_LENGTH = 2048;
     public const MAX_SEGMENTS = 50;
@@ -147,5 +151,37 @@ class TokenizedRoute implements IRoute
         }
 
         return $params;
+    }
+
+    /**
+     * Renders this route to a URL path with the given parameters substituted in.
+     *
+     * @param array<string, string|int|float|Stringable> $params
+     * @throws MissingRouteParameterException If a parameter declared in the
+     *     route pattern is not present in $params.
+     */
+    public function render(array $params = []): string
+    {
+        $segments = [];
+        foreach ($this->tokens as $token) {
+            $tokenLength = strlen($token);
+
+            if ($tokenLength >= 2 && $token[0] === '{' && $token[$tokenLength - 1] === '}') {
+                $name = substr($token, 1, -1);
+
+                if (! array_key_exists($name, $params)) {
+                    throw new MissingRouteParameterException(
+                        sprintf(self::ERROR_MISSING_PARAMETER, $name)
+                    );
+                }
+
+                $segments[] = rawurlencode((string) $params[$name]);
+                continue;
+            }
+
+            $segments[] = $token;
+        }
+
+        return implode(self::PATH_SEPARATOR, $segments);
     }
 }

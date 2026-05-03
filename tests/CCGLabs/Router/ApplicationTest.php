@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Tests\CCGLabs\Router;
 
 use CCGLabs\Router\Application;
+use CCGLabs\Router\Exceptions\MissingRouteParameterException;
+use CCGLabs\Router\Exceptions\RouteNotRenderableException;
+use CCGLabs\Router\Exceptions\UnknownRouteException;
 use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
 use CCGLabs\Router\HandlerLocators\IHandlerLocator;
 use CCGLabs\Router\HTTP\Verb;
@@ -377,6 +380,99 @@ class ApplicationTest extends TestCase
 
         $result = $application->handle($request);
         $this->assertSame($shortCircuitResponse, $result);
+    }
+
+    // Named routes / urlFor
+
+    public function testUrlForRendersStaticNamedRoute(): void
+    {
+        $app = new Application();
+        $app->get('/users/profile', fn () => null, name: 'user.profile');
+
+        $this->assertSame('/users/profile', $app->urlFor('user.profile'));
+    }
+
+    public function testUrlForRendersParameterizedNamedRoute(): void
+    {
+        $app = new Application();
+        $app->get('/users/{id}', fn () => null, name: 'user.show');
+
+        $this->assertSame('/users/42', $app->urlFor('user.show', ['id' => '42']));
+    }
+
+    public function testUrlForUrlEncodesParameters(): void
+    {
+        $app = new Application();
+        $app->get('/search/{q}', fn () => null, name: 'search');
+
+        $this->assertSame('/search/hello%20world', $app->urlFor('search', ['q' => 'hello world']));
+    }
+
+    public function testUrlForThrowsUnknownRouteExceptionForUnregisteredName(): void
+    {
+        $app = new Application();
+
+        $this->expectException(UnknownRouteException::class);
+        $this->expectExceptionMessage('user.show');
+        $app->urlFor('user.show');
+    }
+
+    public function testUrlForPropagatesMissingParameterException(): void
+    {
+        $app = new Application();
+        $app->get('/users/{id}', fn () => null, name: 'user.show');
+
+        $this->expectException(MissingRouteParameterException::class);
+        $app->urlFor('user.show');
+    }
+
+    public function testUrlForThrowsForNonRenderableNamedRoute(): void
+    {
+        $route = $this->createStub(IRoute::class);
+
+        $app = new Application();
+        $app->addRoute(Verb::GET, $route, fn () => null, name: 'custom');
+
+        $this->expectException(RouteNotRenderableException::class);
+        $this->expectExceptionMessage('custom');
+        $app->urlFor('custom');
+    }
+
+    public function testNamedRoutesWorkAcrossAllVerbs(): void
+    {
+        $app = new Application();
+        $app->get('/g/{id}', fn () => null, name: 'g');
+        $app->post('/p/{id}', fn () => null, name: 'p');
+        $app->put('/u/{id}', fn () => null, name: 'u');
+        $app->delete('/d/{id}', fn () => null, name: 'd');
+        $app->patch('/pa/{id}', fn () => null, name: 'pa');
+
+        $this->assertSame('/g/1', $app->urlFor('g', ['id' => '1']));
+        $this->assertSame('/p/2', $app->urlFor('p', ['id' => '2']));
+        $this->assertSame('/u/3', $app->urlFor('u', ['id' => '3']));
+        $this->assertSame('/d/4', $app->urlFor('d', ['id' => '4']));
+        $this->assertSame('/pa/5', $app->urlFor('pa', ['id' => '5']));
+    }
+
+    public function testRoutesWithoutNameAreNotInTheUrlForRegistry(): void
+    {
+        $app = new Application();
+        $app->get('/users/{id}', fn () => null);  // no name
+
+        $this->expectException(UnknownRouteException::class);
+        $app->urlFor('whatever');
+    }
+
+    public function testNameCanBeReusedForLastRegistration(): void
+    {
+        // If a user registers two routes with the same name, the most
+        // recent one wins. This matches user expectation: re-registering
+        // a name overrides.
+        $app = new Application();
+        $app->get('/old/{id}', fn () => null, name: 'show');
+        $app->get('/new/{id}', fn () => null, name: 'show');
+
+        $this->assertSame('/new/42', $app->urlFor('show', ['id' => '42']));
     }
 
     public function testMiddlewareCanModifyRequest(): void

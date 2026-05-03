@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\CCGLabs\Router\Routes;
 
+use CCGLabs\Router\Exceptions\MissingRouteParameterException;
+use CCGLabs\Router\IRenderableRoute;
 use CCGLabs\Router\Routes\TokenizedRoute;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
@@ -345,5 +347,98 @@ class TokenizedRouteTest extends TestCase
         $route = new TokenizedRoute(['']);
 
         $this->assertSame([], $route->matches(''));
+    }
+
+    // render() / IRenderableRoute
+
+    public function testIsRenderable(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/{id}');
+        $this->assertInstanceOf(IRenderableRoute::class, $route);
+    }
+
+    public function testRenderStaticRoute(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/profile');
+        $this->assertSame('/users/profile', $route->render());
+    }
+
+    public function testRenderRouteWithSingleParameter(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/{id}');
+        $this->assertSame('/users/42', $route->render(['id' => '42']));
+    }
+
+    public function testRenderAcceptsIntegerParameter(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/{id}');
+        $this->assertSame('/users/42', $route->render(['id' => 42]));
+    }
+
+    public function testRenderAcceptsFloatParameter(): void
+    {
+        $route = TokenizedRoute::fromPath('/version/{v}');
+        $this->assertSame('/version/1.5', $route->render(['v' => 1.5]));
+    }
+
+    public function testRenderAcceptsStringableParameter(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/{id}');
+
+        $stringable = new class {
+            public function __toString(): string
+            {
+                return 'jane';
+            }
+        };
+
+        $this->assertSame('/users/jane', $route->render(['id' => $stringable]));
+    }
+
+    public function testRenderRouteWithMultipleParameters(): void
+    {
+        $route = TokenizedRoute::fromPath('/posts/{year}/{slug}');
+        $this->assertSame(
+            '/posts/2025/hello-world',
+            $route->render(['year' => '2025', 'slug' => 'hello-world'])
+        );
+    }
+
+    public function testRenderUrlEncodesParameterValues(): void
+    {
+        $route = TokenizedRoute::fromPath('/search/{q}');
+        $this->assertSame('/search/hello%20world', $route->render(['q' => 'hello world']));
+        $this->assertSame('/search/a%26b', $route->render(['q' => 'a&b']));
+    }
+
+    public function testRenderRoundTripsThroughMatches(): void
+    {
+        $route = TokenizedRoute::fromPath('/search/{q}');
+        $url = $route->render(['q' => 'hello world']);
+        $this->assertSame(['q' => 'hello world'], $route->matches($url));
+    }
+
+    public function testRenderThrowsForMissingParameter(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/{id}');
+
+        $this->expectException(MissingRouteParameterException::class);
+        $this->expectExceptionMessage('id');
+        $route->render([]);
+    }
+
+    public function testRenderIgnoresExtraParameters(): void
+    {
+        $route = TokenizedRoute::fromPath('/users/{id}');
+        $this->assertSame(
+            '/users/42',
+            $route->render(['id' => '42', 'unused' => 'value'])
+        );
+    }
+
+    public function testRenderRootPath(): void
+    {
+        $route = TokenizedRoute::fromPath('/');
+        $this->assertSame('/', $route->render());
     }
 }
