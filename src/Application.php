@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CCGLabs\Router;
 
+use CCGLabs\Router\Exceptions\RouteNotRenderableException;
+use CCGLabs\Router\Exceptions\UnknownRouteException;
 use CCGLabs\Router\HandlerLocators\DefaultHandlerLocator;
 use CCGLabs\Router\HandlerLocators\IHandlerLocator;
 use CCGLabs\Router\HTTP\Verb;
@@ -21,6 +23,9 @@ use Psr\Http\Server\RequestHandlerInterface;
  * extracted parameters to the request as the ROUTE_PARAMS_ATTRIBUTE attribute
  * before invoking the middleware chain. Handlers and middleware can read
  * route parameters via Application::getRouteParams($request).
+ *
+ * Routes registered with a $name argument can be referenced by that name
+ * via Application::urlFor() to build URL paths from parameter values.
  */
 class Application implements RequestHandlerInterface
 {
@@ -32,6 +37,14 @@ class Application implements RequestHandlerInterface
 
     /** @var MiddlewareInterface[] */
     protected array $middlewares = [];
+
+    /**
+     * Routes that have been given a name at registration time, keyed by name.
+     * Used by urlFor() to look up a route for URL generation.
+     *
+     * @var array<string, IRoute>
+     */
+    protected array $namedRoutes = [];
 
     public function __construct(
         private IHandlerLocator $handlerLocator = new DefaultHandlerLocator()
@@ -85,38 +98,76 @@ class Application implements RequestHandlerInterface
         return $request->getAttribute(self::ROUTE_PARAMS_ATTRIBUTE) ?? [];
     }
 
-    public function get(string $route, callable|RequestHandlerInterface $handler): self
+    /**
+     * Builds a URL path from a previously named route and a set of parameter values.
+     *
+     * @param string $name The route name supplied at registration.
+     * @param array<string, string|int|float|\Stringable> $params
+     * @throws UnknownRouteException If $name was never registered.
+     * @throws RouteNotRenderableException If the named route's IRoute
+     *     implementation does not implement IRenderableRoute.
+     * @throws \CCGLabs\Router\Exceptions\MissingRouteParameterException If
+     *     the route declares a parameter not present in $params.
+     */
+    public function urlFor(string $name, array $params = []): string
     {
-        return $this->addRoute(Verb::GET, $route, $handler);
+        if (! isset($this->namedRoutes[$name])) {
+            throw new UnknownRouteException(sprintf(
+                'No route registered with name "%s"',
+                $name
+            ));
+        }
+
+        $route = $this->namedRoutes[$name];
+
+        if (! $route instanceof IRenderableRoute) {
+            throw new RouteNotRenderableException(sprintf(
+                'Route "%s" does not support URL generation; its IRoute '
+                . 'implementation must also implement IRenderableRoute',
+                $name
+            ));
+        }
+
+        return $route->render($params);
     }
 
-    public function post(string $route, callable|RequestHandlerInterface $handler): self
+    public function get(string $route, callable|RequestHandlerInterface $handler, ?string $name = null): self
     {
-        return $this->addRoute(Verb::POST, $route, $handler);
+        return $this->addRoute(Verb::GET, $route, $handler, $name);
     }
 
-    public function patch(string $route, callable|RequestHandlerInterface $handler): self
+    public function post(string $route, callable|RequestHandlerInterface $handler, ?string $name = null): self
     {
-        return $this->addRoute(Verb::PATCH, $route, $handler);
+        return $this->addRoute(Verb::POST, $route, $handler, $name);
     }
 
-    public function put(string $route, callable|RequestHandlerInterface $handler): self
+    public function patch(string $route, callable|RequestHandlerInterface $handler, ?string $name = null): self
     {
-        return $this->addRoute(Verb::PUT, $route, $handler);
+        return $this->addRoute(Verb::PATCH, $route, $handler, $name);
     }
 
-    public function delete(string $route, callable|RequestHandlerInterface $handler): self
+    public function put(string $route, callable|RequestHandlerInterface $handler, ?string $name = null): self
     {
-        return $this->addRoute(Verb::DELETE, $route, $handler);
+        return $this->addRoute(Verb::PUT, $route, $handler, $name);
+    }
+
+    public function delete(string $route, callable|RequestHandlerInterface $handler, ?string $name = null): self
+    {
+        return $this->addRoute(Verb::DELETE, $route, $handler, $name);
     }
 
     public function addRoute(
         Verb $verb,
         string|IRoute $route,
-        callable|RequestHandlerInterface $handler
+        callable|RequestHandlerInterface $handler,
+        ?string $name = null,
     ): self {
         if (is_string($route)) {
             $route = TokenizedRoute::fromPath($route);
+        }
+
+        if ($name !== null) {
+            $this->namedRoutes[$name] = $route;
         }
 
         $this->getHandlerLocator()->addRoute($verb, $route, $handler);

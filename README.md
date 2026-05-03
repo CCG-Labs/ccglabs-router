@@ -177,6 +177,35 @@ $app->get('/user/{id}', function($request) {
 });
 ```
 
+### Named Routes and URL Generation
+
+Routes can be given a name at registration time. Named routes can be
+referenced by `Application::urlFor()` to build URL paths from parameter
+values. This is useful for generating links and redirects without
+hard-coding URL strings.
+
+```php
+$app->get('/users/{id}', $userShowHandler, name: 'user.show');
+$app->post('/users', $userCreateHandler, name: 'user.create');
+
+// Build URLs by name + params:
+$url = $app->urlFor('user.show', ['id' => 42]);
+// → '/users/42'
+
+$url = $app->urlFor('search', ['q' => 'hello world']);
+// → '/search/hello%20world'
+```
+
+Parameter values are URL-encoded with `rawurlencode()` so that
+`urlFor()` and the router's path matching round-trip cleanly. Extra
+parameters are ignored. Missing parameters throw
+`MissingRouteParameterException`.
+
+`urlFor()` throws `UnknownRouteException` when the name was never
+registered, and `RouteNotRenderableException` when the named route's
+`IRoute` implementation does not also implement `IRenderableRoute`
+(the built-in `TokenizedRoute` and `StringRoute` both do).
+
 ## Migrating from 2.x
 
 Version 3.0 changes how route parameters reach handlers. The previous
