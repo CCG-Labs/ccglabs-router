@@ -51,6 +51,10 @@ class TokenizedRoute implements IRenderableRoute
     public function __construct(protected array $tokens)
     {
         foreach ($tokens as $token) {
+            // Intentional runtime guard: the @param string[] annotation is a
+            // contract, not enforced by PHP. Defensive validation protects
+            // against callers that bypass static type checking.
+            // @phpstan-ignore function.alreadyNarrowedType
             if (! is_string($token)) {
                 throw new InvalidArgumentException(sprintf(self::ERROR_INVALID_TOKEN, (string) $token));
             }

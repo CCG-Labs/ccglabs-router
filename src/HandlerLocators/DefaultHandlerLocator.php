@@ -10,7 +10,7 @@ use CCGLabs\Router\IRoute;
 use CCGLabs\Router\RequestHandlers\CallableRequestHandler;
 use CCGLabs\Router\RouteMatch;
 use InvalidArgumentException;
-use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
@@ -46,7 +46,7 @@ class DefaultHandlerLocator implements IHandlerLocator
         return $this;
     }
 
-    public function locate(RequestInterface $request): RouteMatch
+    public function locate(ServerRequestInterface $request): RouteMatch
     {
         $verb = Verb::tryFrom($request->getMethod());
 

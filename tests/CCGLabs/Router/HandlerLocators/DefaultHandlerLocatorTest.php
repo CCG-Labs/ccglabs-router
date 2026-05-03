@@ -66,7 +66,7 @@ class DefaultHandlerLocatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $locator = new DefaultHandlerLocator();
-        $request = $this->createStub(RequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('INVALID_VERB');
 
         $locator->locate($request);
@@ -129,7 +129,7 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
         $locator->addRoute(Verb::GET, $route, $handler);
 
-        $request = $this->createStub(RequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 
@@ -153,7 +153,7 @@ class DefaultHandlerLocatorTest extends TestCase
         $locator = new DefaultHandlerLocator();
         $locator->addRoute(Verb::GET, $route, $handler);
 
-        $request = $this->createStub(RequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getMethod')->willReturn('GET');
         $request->method('getUri')->willReturn($uri);
 

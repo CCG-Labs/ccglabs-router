@@ -36,7 +36,7 @@ jobs:
           ${{ runner.os }}-composer-
 
     - name: Install dependencies
-      run: composer install --prefer-dist --no-progress --no-suggest
+      run: composer install --prefer-dist --no-progress
 
     - name: Run tests with coverage
       run: composer test:coverage
@@ -46,7 +46,7 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
-        file: ./build/logs/clover.xml
+        files: ./build/logs/clover.xml
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -78,7 +78,7 @@ jobs:
           ${{ runner.os }}-composer-
 
     - name: Install dependencies
-      run: composer install --prefer-dist --no-progress --no-suggest
+      run: composer install --prefer-dist --no-progress
 
     - name: Check code style
       run: composer cs:check -- --report=checkstyle | cs2pr
@@ -110,7 +110,7 @@ jobs:
           ${{ runner.os }}-composer-
 
     - name: Install dependencies
-      run: composer install --prefer-dist --no-progress --no-suggest
+      run: composer install --prefer-dist --no-progress
 
     - name: Run PHPStan
       run: phpstan analyse src --level=5 --no-progress || true
