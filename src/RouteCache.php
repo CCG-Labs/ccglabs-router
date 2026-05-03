@@ -22,51 +22,33 @@ use Throwable;
  */
 class RouteCache
 {
-    /**
-     * Path-prefix used by defaultPath() under sys_get_temp_dir().
-     */
-    public const DEFAULT_PATH_PREFIX = 'ccglabs-router-';
+    private const DEFAULT_PATH_PREFIX = 'ccglabs-router-';
 
     /**
-     * Returns the default cache file path: a PHP file in the system
-     * temp directory whose name is derived from the current working
-     * directory so that different projects on the same host get
-     * different default cache files.
+     * Default cache file path: derived from cwd so different projects on the
+     * same host don't collide on a shared temp file.
      */
     public static function defaultPath(): string
     {
+        // Fall back to __FILE__ if getcwd() fails (e.g. cwd was deleted under us)
+        // so the hash still resolves to a stable, project-specific value.
         $cwd = getcwd() ?: __FILE__;
         $hash = substr(md5($cwd), 0, 16);
         return sys_get_temp_dir() . DIRECTORY_SEPARATOR . self::DEFAULT_PATH_PREFIX . $hash . '.php';
     }
 
-    /**
-     * Path-string to token-list map. Loaded from the cache file at
-     * construction; mutated by record() during route registration;
-     * trimmed and rewritten by persist().
-     *
-     * @var array<string, string[]>
-     */
+    /** @var array<string, string[]> */
     private array $tokens = [];
 
-    /**
-     * Set of path-strings recorded or hit during this run. Used by
-     * persist() to prune entries no longer in the route table.
-     *
-     * @var array<string, true>
-     */
+    /** @var array<string, true> */
     private array $touched = [];
 
-    /**
-     * Whether persist() needs to write the cache file.
-     */
     private bool $dirty = false;
 
     /**
-     * Whether persist() has already done its work successfully this run.
-     * Used to short-circuit on the request hot path: persist() is called
-     * from Application::handle() on every request, but the cache shape
-     * cannot change during dispatch, so we only need to act once.
+     * Short-circuits persist() on the request hot path. persist() is called
+     * from Application::handle() on every request, but the cache shape can't
+     * change during dispatch, so we only need to act once per process.
      */
     private bool $persisted = false;
 
@@ -80,15 +62,15 @@ class RouteCache
         }
     }
 
+    /**
+     * @internal
+     */
     public function isEnabled(): bool
     {
         return $this->path !== false;
     }
 
     /**
-     * Returns the cached tokens for $path, or null if not cached.
-     * Calling this also marks the path as touched so persist() retains it.
-     *
      * @return string[]|null
      */
     public function getCached(string $path): ?array
@@ -97,15 +79,13 @@ class RouteCache
             return null;
         }
 
+        // Touch on read so persist() retains the entry even when no new
+        // record() call confirms it this run.
         $this->touched[$path] = true;
         return $this->tokens[$path];
     }
 
     /**
-     * Records that $path was registered with the given tokens. Used both
-     * for newly-parsed routes (cold misses) and for re-asserting cached
-     * routes (so they're retained on persist).
-     *
      * @param string[] $tokens
      */
     public function record(string $path, array $tokens): void
@@ -118,10 +98,9 @@ class RouteCache
     }
 
     /**
-     * Writes the cache file if anything changed during this run.
-     * Idempotent: subsequent calls after a successful run are cheap no-ops.
-     * Silently no-ops if caching is disabled. Silently swallows write
-     * failures; if the write fails, the next call will retry.
+     * Best-effort write of the cache file. Idempotent across a process;
+     * silently swallows write failures so the application is unaffected by
+     * an unwritable cache.
      */
     public function persist(): void
     {
@@ -134,8 +113,8 @@ class RouteCache
             return;
         }
 
-        // Routes still in $tokens but not in $touched were removed from
-        // user code since the cache was last written; drop them.
+        // Drop entries that weren't touched this run — those routes were
+        // removed from user code since the cache was last written.
         $pruned = array_intersect_key($this->tokens, $this->touched);
         if (count($pruned) !== count($this->tokens)) {
             $this->tokens = $pruned;
@@ -164,15 +143,12 @@ class RouteCache
         }
     }
 
-    /**
-     * Loads the cache file if it exists. Silently no-ops on read or
-     * parse failure. @include returns false (with suppressed warning)
-     * when the file is missing or unreadable, so an explicit existence
-     * check would be redundant.
-     */
     private function load(): void
     {
         try {
+            // @include returns false on missing/unreadable files; that path is
+            // handled by the is_array check, so we skip an explicit existence
+            // pre-check (which would race against the include anyway).
             $loaded = @include $this->path;
             if (is_array($loaded)) {
                 $this->tokens = $loaded;

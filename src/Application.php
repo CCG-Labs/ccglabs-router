@@ -195,13 +195,6 @@ class Application implements RequestHandlerInterface
         return $this;
     }
 
-    /**
-     * Builds a TokenizedRoute for the given path string, using the cache
-     * if a previous run parsed the same path. Records the result so the
-     * cache stays up to date. The cache itself handles the disabled case:
-     * getCached() returns null on a disabled cache, and record() is a
-     * harmless no-op.
-     */
     private function resolveTokenizedRoute(string $path): TokenizedRoute
     {
         $cached = $this->cache->getCached($path);
